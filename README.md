@@ -27,21 +27,41 @@ https://github.com/user-attachments/assets/675499d5-02cc-4880-8242-0b1c4333c3d2
 
 ## Getting Started
 1. **Requirements**:
-    - Python 3.7+
-    - Unity3D Simulator
-    - Libraries: `numpy`, `opencv-python`, `stable-baselines3`, `gymnasium`, `torch`
+    - OS: `windows`
+    - Python version: 3.10
+    - Libraries: `numpy==1.26.3`, `opencv-python==4.6.0.66`, `stable-baselines3==2.3.2`, `gymnasium==0.29.1`, `torch==2.1.2`
 
-2. **Install dependencies**:
+3. **Install dependencies**:
     ```bash
-    pip install numpy opencv-python stable-baselines3 gymnasium torch
+    conda create -n autodrive_rl python=3.10
+    conda activate autodrive_rl
+    pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cu118
+    pip install gymnasium==0.29.1
+    pip install stable-baselines3==2.3.2
+    pip install opencv-python==4.6.0.66
+    pip install “python-socketio<4.3” “python-engineio<3.9”
+    pip install eventlet
+    pip install flask
+    ```
+    * CPU version
+    ```bash
+    conda create -n autodrive_rl python=3.10
+    conda activate autodrive_rl
+    pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cpu
+    pip install gymnasium==0.29.1
+    pip install stable-baselines3==2.3.2
+    pip install opencv-python==4.6.0.66
+    pip install “python-socketio<4.3” “python-engineio<3.9”
+    pip install eventlet
+    pip install flask
     ```
 
-3. **Run Training**:
+5. **Run Training**:
     ```bash
     python train_stable_baseline.py
     ```
 
-4. **Inference**:
+6. **Inference**:
     After training, you can perform inference using:
     ```bash
     python inference_template.py
