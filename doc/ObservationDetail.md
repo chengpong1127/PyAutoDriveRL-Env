@@ -30,7 +30,7 @@ The following table outlines the key attributes provided by `CarData`:
 
 ### End of Episode Check
 
-The environment also includes functionality to determine when an episode (training round) is over. This is handled by the [`_check_done` method](CarRLEnvironment.py).
+The environment also includes functionality to determine when an episode (training round) is over. This is handled by the [`_check_done` method](https://github.com/Bacon9629/PyAutoDriveRL-Env/blob/f29dae020be0b74792a3dc872e9a5c065b2a09be/CarRLEnvironment.py#L151).
 
 #### Episode Termination Conditions:
 - The episode ends if:
