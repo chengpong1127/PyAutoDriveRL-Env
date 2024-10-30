@@ -4,7 +4,7 @@
 
 The `CarRLEnvironment` class implements a custom Gym-like environment that is specifically tailored for a car simulator, using `CarSocketService` for communication with the simulation.
 
-### Initialization (`__init__`)
+### Initialization ([`__init__`](https://github.com/Bacon9629/PyAutoDriveRL-Env/blob/f5275aebf27a09e2f466471be805c2aa247888c0/CarRLEnvironment.py#L12))
 
 - **Car Service Initialization**: The environment relies on an instance of `CarSocketService` to communicate with the Unity3D car simulator. It waits for a connection before starting.
 - **Observation Space**: This environment uses a dictionary observation space:
@@ -14,7 +14,7 @@ The `CarRLEnvironment` class implements a custom Gym-like environment that is sp
   - **Steering Angle**: A float between -1 (full left) and 1 (full right).
   - **Throttle**: A float between -1 (reverse) and 1 (full throttle forward).
 
-### Reset (`reset`)
+### Reset ([`reset`](https://github.com/Bacon9629/PyAutoDriveRL-Env/blob/f5275aebf27a09e2f466471be805c2aa247888c0/CarRLEnvironment.py#L52))
 
 The `reset` method is responsible for initializing the environment for a new episode. It performs the following steps:
 - Sends a stop command to the car simulator.
@@ -24,7 +24,7 @@ The `reset` method is responsible for initializing the environment for a new epi
 
 It returns the initial observation, which is a dictionary of the grayscale image and the initial steering/speed data.
 
-### Step (`step`)
+### Step ([`step`](https://github.com/Bacon9629/PyAutoDriveRL-Env/blob/f5275aebf27a09e2f466471be805c2aa247888c0/CarRLEnvironment.py#L88))
 
 The `step` function is called to execute one interaction with the environment based on the selected action. Key operations:
 1. **Action Execution**: The `step` function sends the steering and throttle values to the car simulator.
@@ -33,18 +33,18 @@ The `step` function is called to execute one interaction with the environment ba
 4. **Episode Termination Check**: Determines if the episode should end, based on whether the car went off-track or completed the course.
 5. **Returns**: The updated observation, reward, whether the episode is done, and additional info.
 
-### Reward Calculation (`_compute_reward`)
+### Reward Calculation ([`_compute_reward`](https://github.com/Bacon9629/PyAutoDriveRL-Env/blob/f5275aebf27a09e2f466471be805c2aa247888c0/CarRLEnvironment.py#L136))
 
 The reward is calculated primarily based on the car's progress along the track. The environment also penalizes off-track behavior by reducing the reward if the car's position (`y`) falls below 0.
 
-### Episode Termination (`_check_done`)
+### Episode Termination ([`_check_done`](https://github.com/Bacon9629/PyAutoDriveRL-Env/blob/f5275aebf27a09e2f466471be805c2aa247888c0/CarRLEnvironment.py#L151))
 
 Episodes are terminated if:
 - The car goes off-track (`y < 0`).
 - The car completes the track (`progress >= 100`).
 - Time-based termination is applied if too much time has passed without significant progress.
 
-### Preprocessing (`_preprocess_observation`)
+### Preprocessing ([`_preprocess_observation`](https://github.com/Bacon9629/PyAutoDriveRL-Env/blob/f5275aebf27a09e2f466471be805c2aa247888c0/CarRLEnvironment.py#L172))
 
 The raw camera images are resized to 64x64 and converted to grayscale for simplicity, which reduces the complexity of the input data for RL models.
 
