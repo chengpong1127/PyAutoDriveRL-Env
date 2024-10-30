@@ -58,12 +58,14 @@ https://github.com/user-attachments/assets/675499d5-02cc-4880-8242-0b1c4333c3d2
 
 5. **Run Training**:
     ```bash
+    conda activate autodrive_rl
     python train_stable_baseline.py
     ```
 
 6. **Inference**:
     After training, you can perform inference using:
     ```bash
+    conda activate autodrive_rl
     python inference_template.py
     ```
 
