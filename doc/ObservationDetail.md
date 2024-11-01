@@ -10,9 +10,9 @@ The [`CarData` class](CarDataService.py) encapsulates all the telemetry data gen
 
 The following table outlines the key attributes provided by `CarData`:
 
-| Attribute                  | Type           | Description                                                                 |
-|----------------------------|----------------|-----------------------------------------------------------------------------|
-| `image`                    | numpy.ndarray  | The car's front-facing camera feed (RGB image) captured by the simulation.  |
+| Attribute                   | Type           | Description                                                                 |
+|-----------------------------|----------------|-----------------------------------------------------------------------------|
+| `image`                     | numpy.ndarray  | The car's front-facing camera feed (RGB image) captured by the simulation.  |
 | `steering_angle`            | float          | Steering angle (-1 full left, 1 full right).                                |
 | `throttle`                  | float          | Throttle value (-1 for reverse, 1 for full throttle).                       |
 | `speed`                     | float          | The car's speed in meters per second.                                       |
@@ -27,6 +27,7 @@ The following table outlines the key attributes provided by `CarData`:
 | `yaw`, `pitch`, `roll`      | float          | The car's orientation in 3D space (yaw, pitch, roll).                       |
 | `y`                         | float          | The car’s vertical position (negative if off-track).                        |
 | `time_speed_up_scale`       | float          | Time scaling factor if the simulation runs at an accelerated rate.          |
+| `manual_control`            | int            | Is this operation currently a manual operation? If so, the value is 1.      |
 
 ### End of Episode Check
 
