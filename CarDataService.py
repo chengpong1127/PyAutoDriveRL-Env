@@ -41,6 +41,7 @@ class CarData:
         self.roll = np.nan
         self.y = np.nan
         self.time_speed_up_scale = 1
+        self.manual_control = 0
 
     def update(self, data):
         """
@@ -69,6 +70,7 @@ class CarData:
         self.roll = float(data.get("roll", "N/A")) if data.get("roll", "N/A") != "N/A" else np.nan
         self.y = float(data.get("y", "N/A")) if data.get("y", "N/A") != "N/A" else np.nan
         self.time_speed_up_scale = float(data.get("time_speed_up_scale", "N/A")) if data.get("time_speed_up_scale", "N/A") != "N/A" else np.nan
+        self.manual_control = int(data.get("manual_control", "0")) if data.get("manual_control", "N/A") != "N/A" else 0
 
     def __str__(self):
         """

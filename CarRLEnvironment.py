@@ -82,6 +82,7 @@ class CarRLEnvironment(gym.Env):
         self._last_timestamp = car_data.timestamp
         self.progress_queue.clear()
         self.__check_done_use_last_timestamp = car_data.timestamp
+        self.__check_done_use_progress = 0
 
         return self.current_observation, {}
 
@@ -126,7 +127,7 @@ class CarRLEnvironment(gym.Env):
             "steering_speed": np.array([current_steering, current_speed], dtype=np.float32)
         }
 
-        reward = self._compute_reward(car_data)
+        reward = self._compute_reward(car_data, steering_angle, throttle)
         self.done = self._check_done(car_data)
 
         self.last_progress = car_data.progress
@@ -161,7 +162,7 @@ class CarRLEnvironment(gym.Env):
         if car_data.y < 0 or car_data.progress >= 100.0:
             return True
 
-        if car_data.timestamp - self.__check_done_use_last_timestamp > 20_000 / car_data.time_speed_up_scale:
+        if car_data.timestamp - self.__check_done_use_last_timestamp > 30_000 / car_data.time_speed_up_scale:
             if car_data.progress - self.__check_done_use_progress < 0.001:
                 return True
             self.__check_done_use_last_timestamp = car_data.timestamp

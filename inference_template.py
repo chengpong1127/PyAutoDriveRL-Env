@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import cv2
 import numpy as np
@@ -27,6 +28,9 @@ def RL_Process(car_data: CarData):
     Returns:
         tuple: A tuple containing the steering angle, throttle, and reset trigger.
     """
+    sys.stdout.write("\033[H\033[J")
+    print(car_data)
+
     # Extract observations from the car data
     obs = extract_observations(car_data)
 

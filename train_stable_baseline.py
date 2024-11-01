@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.env_checker import check_env
@@ -92,9 +94,12 @@ if __name__ == '__main__':
     # Choose between SAC or PPO model (PPO used here for example)
     # model = SAC("MultiInputPolicy", env, policy_kwargs=policy_kwargs, buffer_size=1_000_000, verbose=0)
     model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1)
+    if os.path.exists(f"{model.__class__.__name__}_best_model.zip"):
+        print("loading model...")
+        model.load(f"{model.__class__.__name__}_best_model.zip")
 
     # Set training parameters
-    total_timesteps = 10000  # Number of timesteps to train in each loop
+    total_timesteps = 100000  # Number of timesteps to train in each loop
     save_interval = 1000  # How often to save the model (in timesteps)
     best_reward = -np.inf  # Initial best reward
     best_model_path = f"{model.__class__.__name__}_best_model"  # Path to save the best model
