@@ -28,6 +28,7 @@ The following table outlines the key attributes provided by `CarData`:
 | `y`                         | float          | The car’s vertical position (negative if off-track).                        |
 | `time_speed_up_scale`       | float          | Time scaling factor if the simulation runs at an accelerated rate.          |
 | `manual_control`            | int            | Is this operation currently a manual operation? If so, the value is 1.      |
+| `obstacle_car`              | int            | Has the car collided with other cars? If so, set the value to 1.            |
 
 ### End of Episode Check
 
