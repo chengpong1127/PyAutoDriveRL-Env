@@ -42,6 +42,7 @@ class CarData:
         self.y = np.nan
         self.time_speed_up_scale = 1
         self.manual_control = 0
+        self.obstacle_car = 0
 
     def update(self, data):
         """
@@ -71,6 +72,7 @@ class CarData:
         self.y = float(data.get("y", "N/A")) if data.get("y", "N/A") != "N/A" else np.nan
         self.time_speed_up_scale = float(data.get("time_speed_up_scale", "N/A")) if data.get("time_speed_up_scale", "N/A") != "N/A" else np.nan
         self.manual_control = int(data.get("manual_control", "0")) if data.get("manual_control", "N/A") != "N/A" else 0
+        self.obstacle_car = int(data.get("obstacle_car", "0")) if data.get("manual_control", "N/A") != "N/A" else 0
 
     def __str__(self):
         """

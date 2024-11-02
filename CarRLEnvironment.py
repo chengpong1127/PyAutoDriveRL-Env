@@ -39,7 +39,6 @@ class CarRLEnvironment(gym.Env):
         self.done = False
         self._last_timestamp = 0
         self.start_time = None
-        self.last_progress = 0.0
         self.system_delay = car_service.system_delay
         self.progress_queue = deque(maxlen=5)
         self.__check_done_use_last_timestamp = 0
@@ -78,7 +77,6 @@ class CarRLEnvironment(gym.Env):
         }
 
         self.start_time = time.time()
-        self.last_progress = float(car_data.progress)
         self._last_timestamp = car_data.timestamp
         self.progress_queue.clear()
         self.__check_done_use_last_timestamp = car_data.timestamp
@@ -106,13 +104,7 @@ class CarRLEnvironment(gym.Env):
         self.car_service.wait_for_new_data()
         # DO NOT CHANGE THE PREVIOUS CODE
 
-        # Update timestamp and calculate FPS
-        time_diff = self.car_service.carData.timestamp - self._last_timestamp
-        fps = int(1000 / time_diff) if time_diff > 0 else 0
-        print(f"\r{fps} fps", end="")
-
         car_data = self.car_service.carData
-        self._last_timestamp = car_data.timestamp
         self.progress_queue.append(float(car_data.progress))
 
         # Process and stack images
@@ -127,10 +119,14 @@ class CarRLEnvironment(gym.Env):
             "steering_speed": np.array([current_steering, current_speed], dtype=np.float32)
         }
 
-        reward = self._compute_reward(car_data, steering_angle, throttle)
+        reward = self._compute_reward(car_data)
         self.done = self._check_done(car_data)
 
-        self.last_progress = car_data.progress
+        # Update timestamp and calculate FPS
+        time_diff = self.car_service.carData.timestamp - self._last_timestamp
+        fps = int(1000 / time_diff) if time_diff > 0 else 0
+        print(f"\r{fps: 03} fps, reward: {reward: 05.2f}", end="")
+        self._last_timestamp = car_data.timestamp
 
         return self.current_observation, reward, self.done, False, {}
 
@@ -147,6 +143,8 @@ class CarRLEnvironment(gym.Env):
         reward = (self.progress_queue[-1] - self.progress_queue[0]) * 100 + car_data.velocity_z * 0.005
         if car_data.y < 0:
             reward -= 10  # Penalize if off track
+        if car_data.obstacle_car == 1:
+            reward -= 10  # Penalize if there is an obstacle
         return reward
 
     def _check_done(self, car_data: CarData):
