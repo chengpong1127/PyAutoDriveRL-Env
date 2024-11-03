@@ -21,6 +21,10 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 - A [Stable Baselines training example script](train_stable_baseline.py) is provided to help you get started quickly.
 - A more flexible [training template script](train_my.py) is also available for users who want to modify the training logic or customize the environment further.
 
+## Notice!!!
+- If you plan to use speed-up functionality during training, make sure your model maintains consistent stability across different FPS levels (high/low). 
+- For instance, if you use information from the previous and next frame as input to the model, inconsistencies in the time interval between frames may lead to unexpected issues.
+
 ## File Structure
 - **`CarDataService.py`**: Handles communication between the car simulation and Python. Manages car telemetry, including speed, position, and camera images.
 - **`CarRLEnvironment.py`**: Defines the GYM-compatible RL environment, using car data for observations and rewards.
