@@ -2,9 +2,7 @@
 
 **PyAutoDriveRL-Env** is a Python-based reinforcement learning (RL) framework designed for training and simulating autonomous driving in a Unity3D environment. The project integrates RL techniques using libraries like Stable Baselines3, and leverages Unity3D for realistic car simulation environments.
 
-
-https://github.com/user-attachments/assets/a50ba25e-111a-476d-bba3-977016ad7b30
-
+https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 
 ## Unity3DCarEnv
 - Made using Unity3D, the project will be made public in the future for everyone to build their own car simulation environment.
