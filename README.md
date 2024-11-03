@@ -4,7 +4,7 @@
 
 https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 
-## Unity3DCarEnv
+## Unity3D Car Simulation Environment
 - Made using Unity3D, the project will be made public in the future for everyone to build their own car simulation environment.
 - [Download link](https://gofile.me/7jNiV/q7CELHz77)
 - Double click the `Car.exe` to start the car simulation environment
@@ -76,8 +76,11 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 - Modify the **`CarRLEnvironment.py`** to adjust observation space or reward functions.
 - Implement your custom RL algorithms in **`train_my.py`** if you prefer not to use Stable Baselines3.
 
-## Enviroment Observation
+## Enviroment Observation Detail
 [ObservationDetail.md](doc/ObservationDetail.md)
+
+## How to control the Car Simulation Environment / Enviroment Action Space Detail
+[CarRLEnvironmentControlGuide.md](doc/CarRLEnvironmentControlGuide.md)
 
 ## Gym-like enviroment detail
 [Gym-likeEnviromentDetail.md](doc/Gym-likeEnviromentDetail.md)
