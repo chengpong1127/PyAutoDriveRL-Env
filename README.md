@@ -8,6 +8,7 @@ https://github.com/user-attachments/assets/675499d5-02cc-4880-8242-0b1c4333c3d2
 ## Unity3DCarEnv
 - Made using Unity3D, the project will be made public in the future for everyone to build their own car simulation environment.
 - [Download link](https://gofile.me/7jNiV/q7CELHz77)
+- Double click the `Car.exe` to start the car simulation environment
 
 ## Features
 - **Reinforcement Learning**: Uses algorithms like PPO and SAC to train autonomous driving models.
