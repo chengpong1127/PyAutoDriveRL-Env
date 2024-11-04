@@ -52,7 +52,7 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
     - OS: `windows`
     - Python version: 3.10
     -
-   Libraries: `numpy==1.26.3`, `opencv-python==4.6.0.66`, `stable-baselines3==2.3.2`, `gymnasium==0.29.1`, `torch==2.1.2`,`ultralytics==8.3.27`
+   Libraries: `numpy==1.26.3`, `opencv-python==4.6.0.66`, `stable-baselines3==2.3.2`, `gymnasium==0.29.1`, `torch==2.1.2`,`ultralytics==8.3.27`,`transformers==4.36.2`
 
 2. **Install dependencies**:
     ```bash
@@ -66,6 +66,7 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
     pip install eventlet
     pip install flask
     pip install ultralytics==8.3.27
+    pip install transformers
     ```
     * CPU version
     ```bash
@@ -79,6 +80,7 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
     pip install eventlet
     pip install flask
     pip install ultralytics==8.3.27
+    pip install transformers
     ```
 
 3. **Run Training**:
