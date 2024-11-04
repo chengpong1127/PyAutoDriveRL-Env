@@ -108,6 +108,7 @@ class CarData:
 
         result.append(f"{'Yaw, Pitch, Roll:':<30} {self.yaw: 09.4f}, {self.pitch: 09.4f}, {self.roll: 09.4f}")
         result.append(f"{'Y Position:':<30} {self.y: 09.4f}")
+        result.append(f"{'Hit An Obstacle:':<30} {self.obstacle_car: 09.4f}")
         result.append(f"{'Progress:':<30} {self.progress: 09.4f}")
         result.append(f"{'Time Speed Up Scale:':<30} {self.time_speed_up_scale: 09.4f}")
 

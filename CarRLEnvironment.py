@@ -125,7 +125,7 @@ class CarRLEnvironment(gym.Env):
         # Update timestamp and calculate FPS
         time_diff = self.car_service.carData.timestamp - self._last_timestamp
         fps = int(1000 / time_diff) if time_diff > 0 else 0
-        print(f"\r{fps: 03} fps, reward: {reward: 05.2f}", end="")
+        print(f"\r{fps: 05.1f} fps -> unity world {fps/car_data.time_speed_up_scale: 05.1f} fps, reward: {reward: 05.2f}", end="")
         self._last_timestamp = car_data.timestamp
 
         return self.current_observation, reward, self.done, False, {}
@@ -143,8 +143,8 @@ class CarRLEnvironment(gym.Env):
         reward = (self.progress_queue[-1] - self.progress_queue[0]) * 100 + car_data.velocity_z * 0.005
         if car_data.y < 0:
             reward -= 10  # Penalize if off track
-        if car_data.obstacle_car == 1:
-            reward -= 10  # Penalize if there is an obstacle
+        # if car_data.obstacle_car == 1:
+        #     reward -= 0.01  # Penalize if there is an obstacle
         return reward
 
     def _check_done(self, car_data: CarData):

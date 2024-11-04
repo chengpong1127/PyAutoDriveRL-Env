@@ -94,9 +94,9 @@ if __name__ == '__main__':
     # Choose between SAC or PPO model (PPO used here for example)
     # model = SAC("MultiInputPolicy", env, policy_kwargs=policy_kwargs, buffer_size=1_000_000, verbose=0)
     model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1)
-    if os.path.exists(f"{model.__class__.__name__}_best_model.zip"):
-        print("loading model...")
-        model.load(f"{model.__class__.__name__}_best_model.zip")
+    # if os.path.exists(f"{model.__class__.__name__}_best_model.zip"):
+    #     print("loading model...")
+    #     model.load(f"{model.__class__.__name__}_best_model.zip")
 
     # Set training parameters
     total_timesteps = 100000  # Number of timesteps to train in each loop
