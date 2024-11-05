@@ -12,6 +12,8 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
   environment.
 - [Download link](https://gofile.me/7jNiV/q7CELHz77)
 - Double click the `Car.exe` to start the car simulation environment
+- When starting the Unity simulation environment, you can manually control the car’s movement using W, A, S, and D keys for forward, backward, and directional movement.
+- Control priority is given first to keyboard control, followed by Python control.
 
 ## Features
 
