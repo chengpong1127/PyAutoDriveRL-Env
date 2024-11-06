@@ -10,7 +10,7 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 
 - Made using Unity3D, the project will be made public in the future for everyone to build their own car simulation
   environment.
-- [Download link](https://gofile.me/7jNiV/q7CELHz77)
+- [Windows download link](https://gofile.me/7jNiV/q7CELHz77), [Linux download link](https://gofile.me/7jNiV/4fe30vS9P)(Contains startup documentation)
 - Double click the `Car.exe` to start the car simulation environment
 - When starting the Unity simulation environment, you can manually control the car’s movement using W, A, S, and D keys for forward, backward, and directional movement.
 - Control priority is given first to keyboard control, followed by Python control.
@@ -53,8 +53,7 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 1. **Requirements**:
     - OS: `windows`
     - Python version: 3.10
-    -
-   Libraries: `numpy==1.26.3`, `opencv-python==4.6.0.66`, `stable-baselines3==2.3.2`, `gymnasium==0.29.1`, `torch==2.1.2`,`ultralytics==8.3.27`,`transformers==4.36.2`
+    - Libraries: `numpy==1.26.3`, `opencv-python==4.6.0.66`, `stable-baselines3==2.3.2`, `gymnasium==0.29.1`, `torch==2.1.2`,`ultralytics==8.3.27`,`transformers==4.36.2`
 
 2. **Install dependencies**:
     ```bash
