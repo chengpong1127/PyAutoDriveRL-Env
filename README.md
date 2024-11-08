@@ -15,6 +15,9 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 - When starting the Unity simulation environment, you can manually control the car’s movement using W, A, S, and D keys for forward, backward, and directional movement.
 - Control priority is given first to keyboard control, followed by Python control.
 
+## 📑Update
+- 2024/11/08: When resetting the vehicle's position, you can now specify the checkpoint from which to restart. Please refer to the [CarRLEnvironmentControlGuide.md](doc%2FCarRLEnvironmentControlGuide.md) for details
+
 ## Features
 
 - **Reinforcement Learning**: Uses algorithms like PPO and SAC to train autonomous driving models.

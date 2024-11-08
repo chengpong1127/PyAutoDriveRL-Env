@@ -4,11 +4,11 @@
 
 In this RL environment, the car’s actions are controlled by a continuous action space, consisting of:
 
-| Action         | Range         | Description                                                                                                  |
-|----------------|---------------|--------------------------------------------------------------------------------------------------------------|
-| Steering Angle | -1 to 1       | Controls the direction of the car; -1 for full left, 1 for full right.                                       |
-| Throttle       | -1 to 1       | Controls speed; positive values for forward acceleration, 0 to maintain speed, negative to brake or reverse. |
-| Reset Trigger  | True or False | If true, Reset simulation environment.                                                                       |
+| Action         | Range                | Description                                                                                                                                                                     |
+|----------------|----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Steering Angle | -1 to 1              | Controls the direction of the car; -1 for full left, 1 for full right.                                                                                                          |
+| Throttle       | -1 to 1              | Controls speed; positive values for forward acceleration, 0 to maintain speed, negative to brake or reverse.                                                                    |
+| Reset Trigger  | 0, 1 or upper than 1 | If set to 0, no position reset will be performed. If set to 1, the car will be reset to its initial position. If set to 1 or higher, reset the car to the specified checkpoint. |
 
 ---
 
@@ -54,7 +54,7 @@ car_service.start_with_nothing()
 # Control Flow in Custom Steps
 while True:
     steering_angle, throttle = np.random.uniform(-1, 1), np.random.uniform(-1, 1)
-    reset_trigger = False
+    reset_trigger = 0  # If set to 0, no position reset will be performed. If set to 1, the car will be reset to its initial position. If set to 1 or higher, reset the car to the specified checkpoint.
     car_service.send_control(steering_angle, throttle, reset_trigger)  # sending data to unity env
     car_service.wait_for_new_data()  # necessary!!!
 ```
@@ -89,7 +89,7 @@ from CarDataService import CarSocketService, CarData
 def RL_Process(car_data: CarData):
     # obs = extract_observations(car_data)  # Process observations
     steering_angle, throttle = np.random.uniform(-1, 1), np.random.uniform(-1, 1)  # Get actions from model
-    reset_trigger = False  # Check if reset is needed
+    reset_trigger = 0  # If set to 0, no position reset will be performed. If set to 1, the car will be reset to its initial position. If set to 1 or higher, reset the car to the specified checkpoint.
     return steering_angle, throttle, reset_trigger  # Return control values
 
 

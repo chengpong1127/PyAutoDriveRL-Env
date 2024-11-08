@@ -187,7 +187,7 @@ class CarSocketService:
         while not self.client_connected and not self.initial_data_received:
             eventlet.sleep(self.system_delay)
 
-        self.send_control(0, 0, True)
+        self.send_control(0, 0, 1)
 
         try:
             while not self.should_stop:
@@ -199,21 +199,24 @@ class CarSocketService:
                     steering_angle, throttle, reset_trigger = action
                     self.send_control(steering_angle, throttle, reset_trigger)
                 else:
-                    self.send_control(0, 0, False)
+                    self.send_control(0, 0, 0)
 
         except (KeyboardInterrupt, SystemExit):
             print("Caught exit signal.")
         finally:
             self.shutdown()
 
-    def send_control(self, steering_angle, throttle, reset_trigger=False):
+    def send_control(self, steering_angle, throttle, reset_trigger=0):
         """
         Sends control signals to the car.
 
         Args:
             steering_angle (float): The steering angle (-1 to 1).
             throttle (float): The throttle value (-1 to 1), less than 0 to reverse and brake.
-            reset_trigger (bool): True if the car should be reset, False otherwise.
+            reset_trigger (int):
+                If set to 1, the car will be reset to its initial position.
+                If set to 1~, reset the car to the specified position
+                If set to 0, no position reset will be performed
         """
         if self.debug:
             print(
@@ -222,12 +225,15 @@ class CarSocketService:
         if -1 > steering_angle > 1 or -1 > throttle > 1:
             raise ValueError("Steering angle and throttle values must be between -1 and 1, but got {} and {}".format(steering_angle, throttle))
 
+        if reset_trigger < 0:
+            raise ValueError("Reset trigger must be >= 0, but got {}".format(reset_trigger))
+
         self.sio.emit(
             "steer",
             data={
                 'steering_angle': str(steering_angle),
                 'throttle': str(throttle),
-                'reset_trigger': '1' if reset_trigger else '0'
+                'reset_trigger': str(reset_trigger),
             },
             skip_sid=True
         )
@@ -288,9 +294,9 @@ class CarSocketService:
             self.client_connected = True  # Set client connected flag
             self.initial_data_received = False  # Reset initial data flag
 
-            self.send_control(0, 0, False)
+            self.send_control(0, 0, 0)
             eventlet.sleep(self.system_delay)
-            self.send_control(0, 0, True)
+            self.send_control(0, 0, 1)
             eventlet.sleep(self.system_delay)
 
         @self.sio.on('disconnect')
