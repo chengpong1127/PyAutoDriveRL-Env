@@ -222,6 +222,17 @@ class CarSocketService:
             print(
                 f"Sending control - Steering Angle: {steering_angle}, Throttle: {throttle}, Reset Trigger: {reset_trigger}")
 
+        try:
+            steering_angle = float(steering_angle)
+            throttle = float(throttle)
+        except ValueError:
+            raise ValueError("Steering angle and throttle values must be floats, but got {} and {}".format(steering_angle, throttle))
+
+        try:
+            reset_trigger = int(reset_trigger)
+        except ValueError:
+            raise ValueError("Reset trigger must be an integer, but got {}".format(reset_trigger))
+
         if -1 > steering_angle > 1 or -1 > throttle > 1:
             raise ValueError("Steering angle and throttle values must be between -1 and 1, but got {} and {}".format(steering_angle, throttle))
 

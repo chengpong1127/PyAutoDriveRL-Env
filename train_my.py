@@ -112,9 +112,13 @@ class CarRLController:
             car_data (CarData): Contains telemetry information such as progress and car's position.
 
         Returns:
-            bool: True if the car should be reset, False otherwise.
+            int: 1 if the car needs to be reset, 0 otherwise.
         """
-        return car_data.y < 0 or car_data.progress >= 100.0
+
+        if car_data.y < 0 or car_data.progress >= 1:
+            return 1
+        else:
+            return 0
 
     def _visualize(self, image):
         """

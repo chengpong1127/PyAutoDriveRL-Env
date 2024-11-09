@@ -26,7 +26,10 @@ def _preprocess_observation( image):
 
 
 def should_reset(car_data: CarData):
-    return car_data.y < 0 or car_data.progress >= 100
+    if car_data.y < 0 or car_data.progress >= 1:
+        return 1
+    else:
+        return 0
 
 
 def RL_Process(car_data: CarData):

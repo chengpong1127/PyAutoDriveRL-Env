@@ -61,7 +61,7 @@ class CarRLEnvironment(gym.Env):
             info (dict): Additional information (empty in this case).
         """
         self.done = False
-        self.car_service.send_control(0, 0, True)  # Send stop command for a clean reset
+        self.car_service.send_control(0, 0, 1)  # Send stop command for a clean reset
         self.car_service.wait_for_new_data()
 
         car_data = self.car_service.carData
