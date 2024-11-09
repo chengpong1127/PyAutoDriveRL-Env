@@ -20,13 +20,6 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 - 2024/11/09: Fix: Bug caused by other scripts not keeping up with the new usage of reset_trigger in the 11/08 update
 - 2024/11/08: New features: When resetting the vehicle's position, you can now specify the checkpoint from which to restart. Please refer to the [CarRLEnvironmentControlGuide.md](doc%2FCarRLEnvironmentControlGuide.md) for details
 
-## 🔔 Features
-
-- **Reinforcement Learning**: Uses algorithms like PPO and SAC to train autonomous driving models.
-- **Unity3D Integration**: Communicates with Unity3D to simulate car environments.
-- **Custom CNN Feature Extractor**: Handles camera input from the car simulation.
-- **Car Simulation Control**: Provides throttle, steering, and reset triggers based on RL models.
-
 ## 🔍 Additional Information
 
 - Unity3D project will be provided, and in future releases, the Unity3D project to allow for custom environment
