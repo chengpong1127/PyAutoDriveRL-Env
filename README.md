@@ -6,44 +6,45 @@ Baselines3, and leverages Unity3D for realistic car simulation environments.
 
 https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 
-## Unity3D Car Simulation Environment
+![SystemFramework.png](doc%2FSystemFramework.png)
 
-- Made using Unity3D, the project will be made public in the future for everyone to build their own car simulation
-  environment.
+## 🚗 Unity3D Car Simulation Environment
+
+- Made using Unity3D, the project will be made public in the future for everyone to build own car simulation environment.
 - [Windows download link](https://gofile.me/7jNiV/q7CELHz77), [Linux download link](https://gofile.me/7jNiV/4fe30vS9P)(Contains startup documentation)
 - Double click the `Car.exe` to start the car simulation environment
 - When starting the Unity simulation environment, you can manually control the car’s movement using W, A, S, and D keys for forward, backward, and directional movement.
 - Control priority is given first to keyboard control, followed by Python control.
 
-## 📑Update
+## 📑 Update
 - 2024/11/09: Fix: Bug caused by other scripts not keeping up with the new usage of reset_trigger in the 11/08 update
 - 2024/11/08: New features: When resetting the vehicle's position, you can now specify the checkpoint from which to restart. Please refer to the [CarRLEnvironmentControlGuide.md](doc%2FCarRLEnvironmentControlGuide.md) for details
 
-## Features
+## 🔔 Features
 
 - **Reinforcement Learning**: Uses algorithms like PPO and SAC to train autonomous driving models.
 - **Unity3D Integration**: Communicates with Unity3D to simulate car environments.
 - **Custom CNN Feature Extractor**: Handles camera input from the car simulation.
 - **Car Simulation Control**: Provides throttle, steering, and reset triggers based on RL models.
 
-## Additional Information
+## 🔍 Additional Information
 
-- Unity3D executable will be provided, and in future releases, the Unity project files to allow for custom environment
+- Unity3D project will be provided, and in future releases, the Unity3D project to allow for custom environment
   editing will also be provided.
-- This project features an environment wrapped using the Gym interface, allowing users to train models with Stable
+- This project features an environment wrapped using the [Gym interface](CarRLEnvironment.py), allowing users to train models with Stable
   Baselines.
 - A [Stable Baselines training example script](train_stable_baseline.py) is provided to help you get started quickly.
 - A more flexible [training template script](train_my.py) is also available for users who want to modify the training
   logic or customize the environment further.
 
-## Notice!!!
+## ❗❗❗❗ Notice ❗❗❗❗
 
 - If you plan to use speed-up functionality during training, make sure your model maintains consistent stability across
   different FPS levels (high/low).
 - For instance, if you use information from the previous and next frame as input to the model, inconsistencies in the
   time interval between frames may lead to unexpected issues.
 
-## File Structure
+## 🏬 File Structure
 
 - **`CarDataService.py`**: Handles communication between the car simulation and Python. Manages car telemetry, including
   speed, position, and camera images.
@@ -52,7 +53,7 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 - **`train_my.py`**: Custom RL training loop with reward computation and action selection.
 - **`inference_template.py`**: Example script for performing inference using the trained RL model.
 
-## Getting Started
+## 📒 Getting Started
 
 1. **Requirements**:
     - OS: `windows`
@@ -88,42 +89,42 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
     pip install transformers
     ```
 
-3. **Run Training**:
+3. **Run Training** (Please start the **_Unity3D Car Simulation Environment_** first):
     ```bash
     conda activate autodrive_rl
     python train_stable_baseline.py
     ```
 
-4. **Inference**:
-   After training, you can perform inference using:
+4. **Inference** (Please start the **_Unity3D Car Simulation Environment_** first):
     ```bash
     conda activate autodrive_rl
     python inference_template.py
     ```
-   or
+   
+    After stablebaseline training, you can perform inference using:
     ```bash
     conda activate autodrive_rl
     python inference_stablebaseline_template.py
     ```
 
-## Customization
+## 🛠️ Customization
 
 - Modify the **`CarRLEnvironment.py`** to adjust observation space or reward functions.
 - Implement your custom RL algorithms in **`train_my.py`** if you prefer not to use Stable Baselines3.
 
-## Environment Observation Detail
+## 📜 Environment Observation Detail
 
 [ObservationDetail.md](doc/ObservationDetail.md)
 
-## How to control the Car Simulation Environment / Environment Action Space Detail
+## 📜 How to control the Car Simulation Environment / Environment Action Space Detail
 
 [CarRLEnvironmentControlGuide.md](doc/CarRLEnvironmentControlGuide.md)
 
-## Gym-like environment detail
+## 📜 Gym-like environment detail
 
 [Gym-likeEnvironmentDetail.md](doc/Gym-likeEnvironmentDetail.md)
 
-## Acknowledgments
+## ❤️ Acknowledgments
 
 This project is built using:
 
