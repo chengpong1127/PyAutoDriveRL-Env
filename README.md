@@ -17,6 +17,7 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 - Control priority is given first to keyboard control, followed by Python control.
 
 ## 📑 Update
+- 2024/11/18: Fix: Fixed a bug that would cause progress to be unable to be traced if a different location was specified for reset. The reason is that as long as it is reset, the progress tracker will be reset at the starting point.
 - 2024/11/09: Fix: Bug caused by other scripts not keeping up with the new usage of reset_trigger in the 11/08 update
 - 2024/11/08: New features: When resetting the vehicle's position, you can now specify the checkpoint from which to restart. Please refer to the [CarRLEnvironmentControlGuide.md](doc%2FCarRLEnvironmentControlGuide.md) for details
 
