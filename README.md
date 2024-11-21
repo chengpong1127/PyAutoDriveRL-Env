@@ -68,20 +68,6 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
     pip install ultralytics==8.3.27
     pip install transformers
     ```
-    * CPU version
-    ```bash
-    conda create -n autodrive_rl python=3.10
-    conda activate autodrive_rl
-    pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cpu
-    pip install gymnasium==0.29.1
-    pip install stable-baselines3==2.3.2
-    pip install opencv-python==4.6.0.66
-    pip install "python-socketio<4.3" "python-engineio<3.9"
-    pip install eventlet
-    pip install flask
-    pip install ultralytics==8.3.27
-    pip install transformers
-    ```
 
 3. **Run Training** (Please start the **_Unity3D Car Simulation Environment_** first):
     ```bash
