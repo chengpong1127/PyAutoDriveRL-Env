@@ -27,10 +27,6 @@ INFERENCE_SCRIPT_NAME = "inference_template.py"
 
 # ============================================================
 
-# 設定影片的錄製編碼
-fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-out = cv2.VideoWriter(VIDEO_PATH, fourcc, FPS, (VIDEO_WIDTH, VIDEO_HEIGHT))
-
 
 # ========================== 功能函數 ==========================
 def countdown_display(frame, remaining_time):
@@ -131,7 +127,11 @@ def record_video():
     """
     主錄製函數，執行整個錄製流程。
     """
-    os.makedirs(os.path.basename(VIDEO_PATH), exist_ok=True)
+    os.makedirs(os.path.dirname(VIDEO_PATH), exist_ok=True)
+
+    # 設定影片的錄製編碼
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(VIDEO_PATH, fourcc, FPS, (VIDEO_WIDTH, VIDEO_HEIGHT))
 
     hwnd = win32gui.FindWindow(None, WINDOW_TITLE)  # 根據窗口名稱查找句柄
     if not hwnd:
@@ -144,11 +144,12 @@ def record_video():
     # 啟動 ResetScript.py
     proc = subprocess.Popen([RESET_SCRIPT_PATH, RESET_SCRIPT_NAME])
     proc.wait()
+    proc = subprocess.Popen([RESET_SCRIPT_PATH, RESET_SCRIPT_NAME])
+    proc.wait()
 
     # 使用 mss 捕獲窗口
     with mss.mss() as sct:
         monitor = {"top": top, "left": left + 10, "width": right - left - 20, "height": bottom - top}
-        start_time = time.time()
 
         try:
             # 倒數5秒
@@ -165,16 +166,19 @@ def record_video():
 
             # 啟動模型推論腳本
             print("Starting inference...")
-            proc = subprocess.Popen([RESET_SCRIPT_PATH, INFERENCE_SCRIPT_NAME])
+            proc = subprocess.Popen([RESET_SCRIPT_PATH, INFERENCE_SCRIPT_NAME], stdout=subprocess.PIPE)
 
+            start_time = time.time()
             # 錄製畫面直到設定結束時間
             while time.time() - start_time < END_TIME:
+                remaining_time = END_TIME - (time.time() - start_time)
                 img = np.array(sct.grab(monitor))
                 img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-                img = text_log_display(img, "Running inference_template.py...")
+                img = text_log_display(img, "Running inference_template.py..., {:.1f} s".format(remaining_time))
                 img = ID_display(img)
                 out.write(cv2.resize(img, (VIDEO_WIDTH, VIDEO_HEIGHT)))
                 cv2.imshow("Recording", img)
+                print(f"Remaining time: {remaining_time:.1f} seconds")
                 if cv2.waitKey(1000 // FPS) & 0xFF == 27:
                     break
 
