@@ -1,3 +1,4 @@
+import os
 import cv2
 import numpy as np
 import subprocess
@@ -7,9 +8,11 @@ import win32con
 import win32gui
 
 # ========================== 參數設定區 ==========================
+student_id = "M11252014"
+
 # 基本參數
 END_TIME = 30  # 錄製結束時間，單位：秒
-VIDEO_PATH = "output_video.mp4"  # 錄製影片的存檔路徑
+VIDEO_PATH = f"results/{student_id}.mp4"  # 錄製影片的存檔路徑
 VIDEO_WIDTH = 720  # 錄製影片的寬度
 VIDEO_HEIGHT = 640  # 錄製影片的高度
 FPS = 30  # 每秒幀數（Frames Per Second）
@@ -49,7 +52,7 @@ def countdown_display(frame, remaining_time):
     text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
     text_width, text_height = text_size
     text_x = (frame.shape[1] - text_width) // 2
-    text_y = (frame.shape[0] + text_height) // 2
+    text_y = (frame.shape[0] + text_height) // 2 + 50
 
     # 將倒數文字寫入畫面
     cv2.putText(frame, text, (text_x, text_y), font, font_scale, color, thickness, cv2.LINE_AA)
@@ -76,6 +79,28 @@ def text_log_display(frame, text):
 
     # 將文字寫入畫面
     cv2.putText(frame, text, (text_x, text_y), font, font_scale, color, thickness, cv2.LINE_AA)
+    return frame
+
+
+def ID_display(frame):
+    """
+    在畫面頂部顯示日誌文字。
+    :param frame: 目前的影像幀
+    :return: 添加文字後的影像幀
+    """
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    color = (255, 255, 255)  # 白色
+    thickness = 3
+    font_scale = 1.5
+
+    # 計算文字尺寸
+    text_size = cv2.getTextSize(student_id, font, font_scale, thickness)[0]
+    text_width, text_height = text_size
+    text_x = (frame.shape[1] - text_width) // 2
+    text_y = 130  # 固定顯示於畫面頂部
+
+    # 將文字寫入畫面
+    cv2.putText(frame, student_id, (text_x, text_y), font, font_scale, color, thickness, cv2.LINE_AA)
     return frame
 
 
@@ -106,6 +131,8 @@ def record_video():
     """
     主錄製函數，執行整個錄製流程。
     """
+    os.makedirs(os.path.basename(VIDEO_PATH), exist_ok=True)
+
     hwnd = win32gui.FindWindow(None, WINDOW_TITLE)  # 根據窗口名稱查找句柄
     if not hwnd:
         print(f"Error: 找不到名為 '{WINDOW_TITLE}' 的窗口")
@@ -131,6 +158,7 @@ def record_video():
                     img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
                     img = countdown_display(img, remaining_time)
                     img = text_log_display(img, "Initializing...")
+                    img = ID_display(img)
                     out.write(cv2.resize(img, (VIDEO_WIDTH, VIDEO_HEIGHT)))
                     cv2.imshow("Recording", img)
                     cv2.waitKey(1)
@@ -144,10 +172,16 @@ def record_video():
                 img = np.array(sct.grab(monitor))
                 img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
                 img = text_log_display(img, "Running inference_template.py...")
+                img = ID_display(img)
                 out.write(cv2.resize(img, (VIDEO_WIDTH, VIDEO_HEIGHT)))
                 cv2.imshow("Recording", img)
                 if cv2.waitKey(1000 // FPS) & 0xFF == 27:
                     break
+
+            img = np.array(sct.grab(monitor))
+            img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+            img = text_log_display(img, "Recording finished, showing final frame...")
+            img = ID_display(img)
 
             # 停止推論腳本
             proc.terminate()
