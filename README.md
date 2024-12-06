@@ -10,7 +10,9 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 
 ## Competition instructions
 * Unity env for competition: [windows](https://gofile.me/7jNiV/BTb6VG54b)
-* Future Release
+* Use [unified scripts](record_script.py) for program execution during competitions
+* Please be sure to understand the content of the script by yourself to avoid losing your rights and interests.
+* You can refer to this document [doc/競賽用 - 統一執行環境腳本說明.md] to understand the script execution process
 
 ## 🚗 Unity3D Car Simulation Environment
 
@@ -21,6 +23,7 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 - Control priority is given first to keyboard control, followed by Python control.
 
 ## 📑 Update
+- 2024/12/07: Update Update competition use recording script: [record_script.py](record_script.py), and doc: [doc/競賽用 - 統一執行環境腳本說明.md]
 - 2024/12/05: Update: Update unity env for competition, link: [windows](https://gofile.me/7jNiV/BTb6VG54b)
 - 2024/11/18: Fix: Fixed a bug that would cause progress to be unable to be traced if a different location was specified for reset. The reason is that as long as it is reset, the progress tracker will be reset at the starting point.
 - 2024/11/09: Fix: Bug caused by other scripts not keeping up with the new usage of reset_trigger in the 11/08 update
