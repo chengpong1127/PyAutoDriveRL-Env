@@ -10,7 +10,8 @@ https://github.com/user-attachments/assets/e4b72665-a27d-40d5-8042-57feab643eef
 
 ## 🥇🥈🥉 Competition Instructions And Rules 🥉🥈🥇
 * Unity env for competition: [windows](https://gofile.me/7jNiV/BTb6VG54b). (If you encounter a obstacle in this environment, it will slow down).
-* Use [unified scripts](record_script.py) for program execution during competitions
+* Use [unified scripts](record_script.py) for program execution during competitions. 
+* All code except [unified scripts](record_script.py) can be changed at will.
 * Please be sure to understand the content of the [unified scripts](record_script.py) by yourself to avoid losing your rights and interests.
 * You can refer to this document [競賽用 - 統一執行環境腳本說明.md](https://github.com/Bacon9629/PyAutoDriveRL-Env/blob/main/doc/%E7%AB%B6%E8%B3%BD%E7%94%A8%20-%20%E7%B5%B1%E4%B8%80%E5%9F%B7%E8%A1%8C%E7%92%B0%E5%A2%83%E8%85%B3%E6%9C%AC%E8%AA%AA%E6%98%8E.md) to understand the [unified scripts](record_script.py) execution process
 * You can reset the environment at any time during the process (but only from the starting point).
