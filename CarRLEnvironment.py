@@ -134,7 +134,7 @@ class CarRLEnvironment(gym.Env):
         Returns:
             reward (float): The calculated reward based on progress and track position.
         """
-        reward = (self.progress_queue[-1] - self.progress_queue[0]) * 100 + car_data.velocity_z * 0.005
+        reward = (self.progress_queue[-1] - self.progress_queue[0]) * 1000 + car_data.velocity_z * 0.005
         if car_data.y < 0:
             reward -= 10  # Penalize if off track
         # if car_data.obstacle_car == 1:

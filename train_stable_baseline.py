@@ -1,7 +1,7 @@
 import os
 
 import numpy as np
-from stable_baselines3 import PPO, SAC
+from stable_baselines3 import PPO, SAC, TD3
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 import torch as th
@@ -13,6 +13,8 @@ from CarDataService import CarSocketService
 
 import wandb
 from wandb.integration.sb3 import WandbCallback
+
+from model import ImageEncoder, ImageEncoderSWIN
 
 wandb.init(
     project="RL-Final",
@@ -31,29 +33,16 @@ class CustomCNN(BaseFeaturesExtractor):
     def __init__(self, observation_space: spaces.Dict, features_dim: int = 256):
         # Extract the 'image' shape from observation space, assuming image is (64, 64, 3)
         super(CustomCNN, self).__init__(observation_space, features_dim)
+        image_feature_dim = 20
+        self.image_encoder = ImageEncoderSWIN(observation_space['image'].shape, image_feature_dim)
 
-        n_input_channels = observation_space['image'].shape[0]  # Get the number of input channels (stacked frames)
-
-        # Define CNN layers
-        self.cnn = nn.Sequential(
-            nn.Conv2d(n_input_channels, 32, kernel_size=9, stride=2, padding=0),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=5, stride=2, padding=0),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=0),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
-
-        # Get the output dimension of the CNN layers
-        with th.no_grad():
-            sample_input = th.zeros(1, *observation_space['image'].shape)
-            cnn_output_dim = self.cnn(sample_input).shape[1]
 
         # Define a fully connected layer to combine CNN output with other inputs (steering/speed)
-        self.linear = nn.Sequential(
-            nn.Linear(cnn_output_dim + 19, features_dim),  # Add steering and speed (2,)
+        self.mlp = nn.Sequential(
+            nn.Linear(image_feature_dim + 19, 128),  # Add steering and speed (2,)
             nn.ReLU(),
+            nn.Linear(128, features_dim),
+            nn.ReLU()
         )
 
     def forward(self, observations):
@@ -70,12 +59,12 @@ class CustomCNN(BaseFeaturesExtractor):
         
         
         image = observations['image']  # Extract image input
-        image_features = self.cnn(image)  # Extract features using CNN
+        image_features = self.image_encoder(image)
 
         total_features = th.cat([image_features] + [observations[cat_feature] for cat_feature in cat_features], dim=1)
         # concat with obstacle_car
         total_features = th.cat([total_features, observations['obstacle_car'].to(th.float32)], dim=1)
-        return self.linear(total_features)
+        return self.mlp(total_features)
 
 
 if __name__ == '__main__':
@@ -102,13 +91,13 @@ if __name__ == '__main__':
 
     # Choose between SAC or PPO model (PPO used here for example)
     # model = SAC("MultiInputPolicy", env, policy_kwargs=policy_kwargs, buffer_size=1_000_000, verbose=0)
-    model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1)
+    model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, n_steps=1000)
     # if os.path.exists(f"{model.__class__.__name__}_best_model.zip"):
     #     print("loading model...")
     #     model.load(f"{model.__class__.__name__}_best_model.zip")
 
     # Set training parameters
-    total_timesteps = 100000  # Number of timesteps to train in each loop
+    total_timesteps = 2000  # Number of timesteps to train in each loop
     save_interval = 1000  # How often to save the model (in timesteps)
     best_reward = -np.inf  # Initial best reward
     best_model_path = f"{model.__class__.__name__}_best_model"  # Path to save the best model
