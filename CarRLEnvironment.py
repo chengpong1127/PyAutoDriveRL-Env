@@ -38,8 +38,8 @@ class CarRLEnvironment(gym.Env):
             "timestamp": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.int32),
             "y": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             "time_speed_up_scale": spaces.Box(low=0.0, high=np.inf, shape=(1,), dtype=np.float32),
-            "manual_control": spaces.Discrete(2),
-            "obstacle_car": spaces.Discrete(2)
+            "manual_control": spaces.MultiBinary(1),
+            "obstacle_car": spaces.MultiBinary(1)
         })
 
         # Action space: steering angle (-1 to 1) and throttle (0 to 1)
@@ -213,8 +213,8 @@ class CarRLEnvironment(gym.Env):
             "timestamp": np.array([car_data.timestamp], dtype=np.int32),
             "y": np.array([car_data.y], dtype=np.float32),
             "time_speed_up_scale": np.array([car_data.time_speed_up_scale], dtype=np.float32),
-            "manual_control": car_data.manual_control,
-            "obstacle_car": car_data.obstacle_car
+            "manual_control": np.array([car_data.manual_control], dtype=np.int8),
+            "obstacle_car": np.array([car_data.obstacle_car], dtype=np.int8)
         }
         
         for key, value in observation.items():

@@ -11,6 +11,13 @@ from gymnasium import spaces
 from CarRLEnvironment import CarRLEnvironment
 from CarDataService import CarSocketService
 
+import wandb
+from wandb.integration.sb3 import WandbCallback
+
+wandb.init(
+    project="RL-Final",
+)
+
 
 class CustomCNN(BaseFeaturesExtractor):
     """
@@ -45,7 +52,7 @@ class CustomCNN(BaseFeaturesExtractor):
 
         # Define a fully connected layer to combine CNN output with other inputs (steering/speed)
         self.linear = nn.Sequential(
-            nn.Linear(cnn_output_dim + 20, features_dim),  # Add steering and speed (2,)
+            nn.Linear(cnn_output_dim + 19, features_dim),  # Add steering and speed (2,)
             nn.ReLU(),
         )
 
@@ -67,7 +74,7 @@ class CustomCNN(BaseFeaturesExtractor):
 
         total_features = th.cat([image_features] + [observations[cat_feature] for cat_feature in cat_features], dim=1)
         # concat with obstacle_car
-        total_features = th.cat([total_features, observations['obstacle_car']], dim=1)
+        total_features = th.cat([total_features, observations['obstacle_car'].to(th.float32)], dim=1)
         return self.linear(total_features)
 
 
@@ -120,7 +127,7 @@ if __name__ == '__main__':
         """
 
         # Train the model for a specified number of timesteps
-        model.learn(total_timesteps=total_timesteps, reset_num_timesteps=False)
+        model.learn(total_timesteps=total_timesteps, reset_num_timesteps=False, callback=WandbCallback())
 
         # Save the latest model after each training step
         print(f"Saving latest model: {latest_model_path}")
