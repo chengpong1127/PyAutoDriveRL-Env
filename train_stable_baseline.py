@@ -45,7 +45,7 @@ class CustomCNN(BaseFeaturesExtractor):
 
         # Define a fully connected layer to combine CNN output with other inputs (steering/speed)
         self.linear = nn.Sequential(
-            nn.Linear(cnn_output_dim + 2, features_dim),  # Add steering and speed (2,)
+            nn.Linear(cnn_output_dim + 20, features_dim),  # Add steering and speed (2,)
             nn.ReLU(),
         )
 
@@ -59,14 +59,16 @@ class CustomCNN(BaseFeaturesExtractor):
         Returns:
             Tensor: A tensor representing extracted features from image and steering/speed.
         """
+        cat_features = ['steering_angle', 'throttle', 'speed', 'velocity', 'acceleration', 'angular_velocity', 'wheel_friction', 'orientation', 'brake_input']
+        
+        
         image = observations['image']  # Extract image input
         image_features = self.cnn(image)  # Extract features using CNN
 
-        # Process non-image input (steering and speed)
-        steering_speed = observations['steering_speed']
-
-        # Concatenate image features and steering/speed, and pass through the linear layer
-        return self.linear(th.cat([image_features, steering_speed], dim=1))
+        total_features = th.cat([image_features] + [observations[cat_feature] for cat_feature in cat_features], dim=1)
+        # concat with obstacle_car
+        total_features = th.cat([total_features, observations['obstacle_car']], dim=1)
+        return self.linear(total_features)
 
 
 if __name__ == '__main__':
