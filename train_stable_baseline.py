@@ -34,12 +34,14 @@ class CustomCNN(BaseFeaturesExtractor):
         # Extract the 'image' shape from observation space, assuming image is (64, 64, 3)
         super(CustomCNN, self).__init__(observation_space, features_dim)
         image_feature_dim = 20
-        self.image_encoder = ImageEncoderSWIN(observation_space['image'].shape, image_feature_dim)
-
+        
+        #self.image_encoder = ImageEncoderSWIN(observation_space['image'].shape, image_feature_dim)
+        self.line_encoder = ImageEncoder((1, 120, 240), image_feature_dim)
+        self.depth_encoder = ImageEncoder((1, 120, 240), image_feature_dim)
 
         # Define a fully connected layer to combine CNN output with other inputs (steering/speed)
         self.mlp = nn.Sequential(
-            nn.Linear(image_feature_dim + 19, 128),  # Add steering and speed (2,)
+            nn.Linear(image_feature_dim + image_feature_dim + 19, 128),  # Add steering and speed (2,)
             nn.ReLU(),
             nn.Linear(128, features_dim),
             nn.ReLU()
@@ -57,11 +59,18 @@ class CustomCNN(BaseFeaturesExtractor):
         """
         cat_features = ['steering_angle', 'throttle', 'speed', 'velocity', 'acceleration', 'angular_velocity', 'wheel_friction', 'orientation', 'brake_input']
         
+        line_image = observations['line_image']
+        line_image = th.nn.functional.interpolate(line_image, size=(120, 240), mode='nearest')
+        line_feature = self.line_encoder(line_image)
         
-        image = observations['image']  # Extract image input
-        image_features = self.image_encoder(image)
+        depth_image = observations['depth_image']
+        depth_image = th.nn.functional.interpolate(depth_image, size=(120, 240), mode='bilinear')
+        depth_feature = self.depth_encoder(depth_image)
+        
+        
+        #image_features = self.image_encoder(image)
 
-        total_features = th.cat([image_features] + [observations[cat_feature] for cat_feature in cat_features], dim=1)
+        total_features = th.cat([line_feature] + [depth_feature] + [observations[cat_feature] for cat_feature in cat_features], dim=1)
         # concat with obstacle_car
         total_features = th.cat([total_features, observations['obstacle_car'].to(th.float32)], dim=1)
         return self.mlp(total_features)

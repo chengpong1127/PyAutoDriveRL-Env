@@ -6,6 +6,9 @@ import numpy as np
 import cv2
 import eventlet
 from CarDataService import CarSocketService, CarData
+from lane_detection import lane_detection
+from transformers import pipeline
+from PIL import Image
 
 
 class CarRLEnvironment(gym.Env):
@@ -25,6 +28,8 @@ class CarRLEnvironment(gym.Env):
         # Observation space includes stacked frames and steering/speed information.
         self.observation_space = spaces.Dict({
             "image": spaces.Box(low=0, high=255, shape=(480, 960, 3), dtype=np.uint8),
+            "line_image": spaces.Box(low=0, high=255, shape=(480, 960, 1), dtype=np.uint8),
+            "depth_image": spaces.Box(low=0, high=255, shape=(480, 960, 1), dtype=np.uint8),
             "steering_angle": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             "throttle": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
             "speed": spaces.Box(low=0.0, high=np.inf, shape=(1,), dtype=np.float32),
@@ -55,6 +60,8 @@ class CarRLEnvironment(gym.Env):
         self.speed_queue = deque(maxlen=10)
         self.__check_done_use_last_timestamp = 0
         self.__check_done_use_progress = 0
+        
+        self.depth_model = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf", device='cuda')
 
         # Wait for connection and data
         while not (self.car_service.client_connected and self.car_service.initial_data_received):
@@ -203,9 +210,14 @@ class CarRLEnvironment(gym.Env):
         """
         Convert CarData instance to observation space dictionary.
         """
+        
+        depth_image = self.depth_model(Image.fromarray(car_data.image))['depth']
+        depth_image = np.array(depth_image).reshape(480, 960, 1)
 
         observation = {
             "image": car_data.image,
+            "line_image": lane_detection(car_data.image)['line_image'],
+            "depth_image": depth_image,
             "steering_angle": np.array([car_data.steering_angle], dtype=np.float32),
             "throttle": np.array([car_data.throttle], dtype=np.float32),
             "speed": np.array([car_data.speed], dtype=np.float32),
@@ -222,6 +234,10 @@ class CarRLEnvironment(gym.Env):
             "manual_control": np.array([car_data.manual_control], dtype=np.int8),
             "obstacle_car": np.array([car_data.obstacle_car], dtype=np.int8)
         }
+        
+        
+        cv2.imwrite("depth_image.jpg", observation["depth_image"])
+        cv2.imwrite("line_image.jpg", observation["line_image"])
         
         for key, value in observation.items():
             if np.isnan(value).any():

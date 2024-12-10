@@ -8,9 +8,7 @@ class ImageEncoder(nn.Module):
         self.main = nn.Sequential(
             nn.Conv2d(input_dim[0], 32, 3, 2, 1),
             nn.ReLU(),
-            nn.Conv2d(32, 64, 3, 2, 1),
-            nn.ReLU(),
-            nn.Conv2d(64, 128, 3, 2, 1),
+            nn.Conv2d(32, 16, 3, 2, 1),
             nn.ReLU(),
             nn.Flatten(),
         )
