@@ -166,7 +166,7 @@ def record_video():
 
             # 啟動模型推論腳本
             print("Starting inference...")
-            proc = subprocess.Popen([RESET_SCRIPT_PATH, INFERENCE_SCRIPT_NAME], stdout=subprocess.PIPE)
+            proc = subprocess.Popen([RESET_SCRIPT_PATH, INFERENCE_SCRIPT_NAME])
 
             start_time = time.time()
             # 錄製畫面直到設定結束時間
