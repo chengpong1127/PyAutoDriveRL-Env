@@ -29,7 +29,7 @@ class CarRLEnvironment(gym.Env):
         # Observation space includes stacked frames and steering/speed information.
         self.observation_space = spaces.Dict({
             "image": spaces.Box(low=0, high=255, shape=(480, 960, 3), dtype=np.uint8),
-            "line_image": spaces.Box(low=0, high=255, shape=(480, 960, 3), dtype=np.uint8),
+            "line_image": spaces.Box(low=0, high=255, shape=(480, 960, 1), dtype=np.uint8),
             "depth_image": spaces.Box(low=0, high=255, shape=(480, 960, 1), dtype=np.uint8),
             "steering_angle": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             "throttle": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
