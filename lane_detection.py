@@ -21,11 +21,11 @@ def lane_detection(image):
     
     lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi/180, threshold=50, minLineLength=40, maxLineGap=5)
     
-    line_image = np.zeros((image.shape[0], image.shape[1], 1), dtype=np.uint8)
+    line_image = image.copy()
     if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line[0]
-            cv2.line(line_image, (x1, y1), (x2, y2), 255, 5)
+            cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 5)
     
     return {
         "gray": gray,

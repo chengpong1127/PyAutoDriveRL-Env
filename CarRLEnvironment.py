@@ -9,6 +9,7 @@ from CarDataService import CarSocketService, CarData
 from lane_detection import lane_detection
 from transformers import pipeline
 from PIL import Image
+import os
 
 
 class CarRLEnvironment(gym.Env):
@@ -28,7 +29,7 @@ class CarRLEnvironment(gym.Env):
         # Observation space includes stacked frames and steering/speed information.
         self.observation_space = spaces.Dict({
             "image": spaces.Box(low=0, high=255, shape=(480, 960, 3), dtype=np.uint8),
-            "line_image": spaces.Box(low=0, high=255, shape=(480, 960, 1), dtype=np.uint8),
+            "line_image": spaces.Box(low=0, high=255, shape=(480, 960, 3), dtype=np.uint8),
             "depth_image": spaces.Box(low=0, high=255, shape=(480, 960, 1), dtype=np.uint8),
             "steering_angle": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             "throttle": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
@@ -57,7 +58,7 @@ class CarRLEnvironment(gym.Env):
         self.start_time = None
         self.system_delay = car_service.system_delay
         self.progress_queue = deque(maxlen=5)
-        self.speed_queue = deque(maxlen=10)
+        self.speed_queue = deque(maxlen=20)
         self.__check_done_use_last_timestamp = 0
         self.__check_done_use_progress = 0
         
@@ -84,7 +85,6 @@ class CarRLEnvironment(gym.Env):
         self.car_service.wait_for_new_data()
 
         car_data = self.car_service.carData
-        print(car_data)
         # Initialize observation with steering and speed
         self.current_observation = self.car_data_to_observation(car_data)
 
@@ -129,10 +129,17 @@ class CarRLEnvironment(gym.Env):
         # Update timestamp and calculate FPS
         time_diff = self.car_service.carData.timestamp - self._last_timestamp
         fps = int(1000 / time_diff) if time_diff > 0 else 0
-        print(f"\r{fps: 05.1f} fps -> unity world {fps/car_data.time_speed_up_scale: 05.1f} fps, reward: {reward: 05.2f}", end="")
+        self.display_info(fps, fps/car_data.time_speed_up_scale, reward, car_data)
         self._last_timestamp = car_data.timestamp
 
         return self.current_observation, reward, self.done, False, {}
+    
+    def display_info(self, fps, unity_fps, reward, car_data):
+        # clear console
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print(car_data)
+        print(f"FPS: {fps: 05.1f} -> Unity World FPS: {unity_fps: 05.1f}, Reward: {reward: 05.2f}")
+    
 
     def _compute_reward(self, car_data: CarData):
         """
@@ -146,9 +153,12 @@ class CarRLEnvironment(gym.Env):
         """
         reward = (self.progress_queue[-1] - self.progress_queue[0]) * 1000 + car_data.velocity_z * 0.005
         if car_data.y < 0:
-            reward -= 10  # Penalize if off track
-        # if car_data.obstacle_car == 1:
-        #     reward -= 0.01  # Penalize if there is an obstacle
+            reward = -10  # Penalize if off track
+        if car_data.obstacle_car == 1:
+            reward -= 0.01  # Penalize if there is an obstacle
+        if self.progress_queue[-1] - self.progress_queue[0] < 0:
+            reward = -10
+        
         return reward
 
     def _check_done(self, car_data: CarData):
@@ -170,7 +180,8 @@ class CarRLEnvironment(gym.Env):
             self.__check_done_use_last_timestamp = car_data.timestamp
             self.__check_done_use_progress = car_data.progress
         
-        if len(self.speed_queue) == 10 and np.mean(self.speed_queue) < 0.2:
+        if len(self.speed_queue) > 15 and np.mean(self.speed_queue) < 0.05:
+            print("Car is stuck!")
             return True
 
         return False
