@@ -1,7 +1,7 @@
 import os
 
 import numpy as np
-from stable_baselines3 import PPO, SAC, TD3
+from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 import torch as th
@@ -90,8 +90,8 @@ if __name__ == '__main__':
     }
 
     # Choose between SAC or PPO model (PPO used here for example)
-    # model = SAC("MultiInputPolicy", env, policy_kwargs=policy_kwargs, buffer_size=1_000_000, verbose=0)
-    model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, n_steps=1000)
+    # model = SAC("MultiInputPolicy", env, policy_kwargs=policy_kwargs, buffer_size=2048, verbose=1, batch_size=64)
+    model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, n_steps=512, batch_size=64, n_epochs=10)
     # if os.path.exists(f"{model.__class__.__name__}_best_model.zip"):
     #     print("loading model...")
     #     model.load(f"{model.__class__.__name__}_best_model.zip")

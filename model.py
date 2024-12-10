@@ -27,10 +27,11 @@ class ImageEncoderSWIN(nn.Module):
         super(ImageEncoderSWIN, self).__init__()
         self.swin = AutoModel.from_pretrained("microsoft/swin-tiny-patch4-window7-224")
         with torch.no_grad():
-            flatten_size = self.swin(torch.zeros(1, *input_dim)).last_hidden_state.flatten(1).shape[1]
+            flatten_size = self.swin(torch.zeros(1, *input_dim)).pooler_output.shape[1]
         self.linear = nn.Linear(flatten_size, output_dim)
     
     def forward(self, x):
         with torch.no_grad():
-            x = self.swin(x).last_hidden_state.flatten(1)
+            x = nn.functional.interpolate(x, size=(224, 224), mode='bilinear')
+            x = self.swin(x).pooler_output
         return self.linear(x)

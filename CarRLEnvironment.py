@@ -35,7 +35,7 @@ class CarRLEnvironment(gym.Env):
             "orientation": spaces.Box(low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32),
             "brake_input": spaces.Box(low=0.0, high=1.0, shape=(1,), dtype=np.float32),
             "progress": spaces.Box(low=0.0, high=100.0, shape=(1,), dtype=np.float32),
-            "timestamp": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.int32),
+            "timestamp": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.int64),
             "y": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             "time_speed_up_scale": spaces.Box(low=0.0, high=np.inf, shape=(1,), dtype=np.float32),
             "manual_control": spaces.MultiBinary(1),
@@ -52,6 +52,7 @@ class CarRLEnvironment(gym.Env):
         self.start_time = None
         self.system_delay = car_service.system_delay
         self.progress_queue = deque(maxlen=5)
+        self.speed_queue = deque(maxlen=10)
         self.__check_done_use_last_timestamp = 0
         self.__check_done_use_progress = 0
 
@@ -83,6 +84,7 @@ class CarRLEnvironment(gym.Env):
         self.start_time = time.time()
         self._last_timestamp = car_data.timestamp
         self.progress_queue.clear()
+        self.speed_queue.clear()
         self.__check_done_use_last_timestamp = car_data.timestamp
         self.__check_done_use_progress = 0
 
@@ -110,6 +112,7 @@ class CarRLEnvironment(gym.Env):
 
         car_data = self.car_service.carData
         self.progress_queue.append(float(car_data.progress))
+        self.speed_queue.append(float(car_data.speed))
 
         self.current_observation = self.car_data_to_observation(car_data)
 
@@ -159,6 +162,9 @@ class CarRLEnvironment(gym.Env):
                 return True
             self.__check_done_use_last_timestamp = car_data.timestamp
             self.__check_done_use_progress = car_data.progress
+        
+        if len(self.speed_queue) == 10 and np.mean(self.speed_queue) < 0.2:
+            return True
 
         return False
 
@@ -210,7 +216,7 @@ class CarRLEnvironment(gym.Env):
             "orientation": np.array([car_data.yaw, car_data.pitch, car_data.roll], dtype=np.float32),
             "brake_input": np.array([car_data.brake_input], dtype=np.float32),
             "progress": np.array([car_data.progress], dtype=np.float32),
-            "timestamp": np.array([car_data.timestamp], dtype=np.int32),
+            "timestamp": np.array([car_data.timestamp], dtype=np.int64),
             "y": np.array([car_data.y], dtype=np.float32),
             "time_speed_up_scale": np.array([car_data.time_speed_up_scale], dtype=np.float32),
             "manual_control": np.array([car_data.manual_control], dtype=np.int8),
