@@ -34,16 +34,14 @@ class CustomCNN(BaseFeaturesExtractor):
         # Extract the 'image' shape from observation space, assuming image is (64, 64, 3)
         super(CustomCNN, self).__init__(observation_space, features_dim)
         image_feature_dim = 20
-        
+        self.image_size = (60, 120)
         #self.image_encoder = ImageEncoderSWIN(observation_space['image'].shape, image_feature_dim)
-        self.image_encoder = ImageEncoder((5, 120, 240), image_feature_dim)
+        self.image_encoder = ImageEncoder((5, *self.image_size), image_feature_dim)
 
         # Define a fully connected layer to combine CNN output with other inputs (steering/speed)
         self.mlp = nn.Sequential(
-            nn.Linear(image_feature_dim + 19, 128),  # Add steering and speed (2,)
+            nn.Linear(image_feature_dim + 19, features_dim),  # Add steering and speed (2,)
             nn.ReLU(),
-            nn.Linear(128, features_dim),
-            nn.ReLU()
         )
 
     def forward(self, observations):
@@ -62,7 +60,7 @@ class CustomCNN(BaseFeaturesExtractor):
         line_image = observations['line_image']
         depth_image = observations['depth_image']
         hybrid_image = th.cat([image, line_image, depth_image], dim=1)
-        hybrid_image = th.nn.functional.interpolate(hybrid_image, size=(120, 240), mode='bilinear')
+        hybrid_image = th.nn.functional.interpolate(hybrid_image, size=self.image_size, mode='bilinear')
         
         hybrid_feature = self.image_encoder(hybrid_image)
 
@@ -91,7 +89,7 @@ if __name__ == '__main__':
     # Define policy arguments with the custom CNN feature extractor
     policy_kwargs = {
         "features_extractor_class": CustomCNN,
-        "features_extractor_kwargs": {"features_dim": 256},  # Change feature dimensions if needed
+        "features_extractor_kwargs": {"features_dim": 64},  # Change feature dimensions if needed
     }
 
     # Choose between SAC or PPO model (PPO used here for example)
