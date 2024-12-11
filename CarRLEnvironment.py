@@ -257,9 +257,6 @@ class CarRLEnvironment(gym.Env):
         }
         
         
-        cv2.imwrite("depth_image.jpg", observation["depth_image"])
-        cv2.imwrite("edge_image.jpg", observation["edge_image"])
-        
         for key, value in observation.items():
             if np.isnan(value).any():
                 observation[key] = np.nan_to_num(value)
