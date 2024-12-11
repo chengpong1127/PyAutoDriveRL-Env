@@ -34,14 +34,18 @@ class CustomCNN(BaseFeaturesExtractor):
     def __init__(self, observation_space: spaces.Dict, features_dim: int = 256):
         # Extract the 'image' shape from observation space, assuming image is (64, 64, 3)
         super(CustomCNN, self).__init__(observation_space, features_dim)
-        image_feature_dim = 20
-        self.image_size = (60, 120)
-        #self.image_encoder = ImageEncoderSWIN(observation_space['image'].shape, image_feature_dim)
-        self.image_encoder = ImageEncoder((5, *self.image_size), image_feature_dim)
+        image_feature_dim = 16
+        image_size = observation_space['image'].shape[1:]
+        #self.image_encoder = ImageEncoderSWIN((5, *image_size), image_feature_dim)
+        #self.image_encoder = ImageEncoder((5, *image_size), image_feature_dim)
+        self.depth_encoder = ImageEncoder((1, *image_size), image_feature_dim)
+        self.edge_encoder = ImageEncoder((1, *image_size), image_feature_dim)
+        #self.line_encoder = ImageEncoder((1, *image_size), image_feature_dim)
 
         # Define a fully connected layer to combine CNN output with other inputs (steering/speed)
         self.mlp = nn.Sequential(
-            nn.Linear(image_feature_dim + 19, features_dim),  # Add steering and speed (2,)
+            nn.BatchNorm1d(image_feature_dim + image_feature_dim + 4),
+            nn.Linear(image_feature_dim + image_feature_dim + 4, features_dim),  # Add steering and speed (2,)
             nn.ReLU(),
         )
 
@@ -55,17 +59,23 @@ class CustomCNN(BaseFeaturesExtractor):
         Returns:
             Tensor: A tensor representing extracted features from image and steering/speed.
         """
-        cat_features = ['steering_angle', 'throttle', 'speed', 'velocity', 'acceleration', 'angular_velocity', 'wheel_friction', 'orientation', 'brake_input']
+        cat_features = ['steering_angle', 'throttle', 'speed']
         
         image = observations['image']
-        line_image = observations['line_image']
-        depth_image = observations['depth_image']
-        hybrid_image = th.cat([image, line_image, depth_image], dim=1)
-        hybrid_image = th.nn.functional.interpolate(hybrid_image, size=self.image_size, mode='bilinear')
+        line_image = observations['line_image'].unsqueeze(1)
+        depth_image = observations['depth_image'].unsqueeze(1)
+        edge_image = observations['edge_image'].unsqueeze(1)
         
-        hybrid_feature = self.image_encoder(hybrid_image)
+        
+        depth_feature = self.depth_encoder(depth_image)
+        
+        edge_feature = self.edge_encoder(edge_image)
+        
+        #hybrid_image = th.cat([image, line_image, depth_image], dim=1)
+        #hybrid_feature = self.image_encoder(hybrid_image)
+        
 
-        total_features = th.cat([hybrid_feature] + [observations[cat_feature] for cat_feature in cat_features], dim=1)
+        total_features = th.cat([depth_feature] + [edge_feature] + [observations[cat_feature] for cat_feature in cat_features], dim=1)
         # concat with obstacle_car
         total_features = th.cat([total_features, observations['obstacle_car'].to(th.float32)], dim=1)
         return self.mlp(total_features)
@@ -90,12 +100,12 @@ if __name__ == '__main__':
     # Define policy arguments with the custom CNN feature extractor
     policy_kwargs = {
         "features_extractor_class": CustomCNN,
-        "features_extractor_kwargs": {"features_dim": 64},  # Change feature dimensions if needed
+        "features_extractor_kwargs": {"features_dim": 16},  # Change feature dimensions if needed
     }
 
     # Choose between SAC or PPO model (PPO used here for example)
-    # model = SAC("MultiInputPolicy", env, policy_kwargs=policy_kwargs, buffer_size=2048, verbose=1, batch_size=64)
-    model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, n_steps=128, batch_size=64, n_epochs=10, learning_rate=0.003, tensorboard_log="run/")
+    #model = SAC("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, batch_size=128, tensorboard_log="run/")
+    model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, n_steps=1024, batch_size=256, n_epochs=10, learning_rate=0.001, tensorboard_log="run/")
     # if os.path.exists(f"{model.__class__.__name__}_best_model.zip"):
     #     print("loading model...")
     #     model.load(f"{model.__class__.__name__}_best_model.zip")

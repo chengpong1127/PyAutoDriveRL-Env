@@ -1,15 +1,20 @@
 from torch import nn
 import torch
-from transformers import AutoModel
+from transformers import Swinv2Model, Swinv2Config
 
 class ImageEncoder(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(ImageEncoder, self).__init__()
         self.main = nn.Sequential(
-            nn.Conv2d(input_dim[0], 32, 3, 2, 1),
+            nn.Conv2d(input_dim[0], 16, 9, 2, 1),
             nn.ReLU(),
-            nn.Conv2d(32, 16, 3, 2, 1),
+            nn.MaxPool2d(2),
+            nn.Conv2d(16, 16, 5, 2, 1),
             nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(16, 16, 3, 2, 1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
             nn.Flatten(),
         )
         with torch.no_grad():
@@ -23,13 +28,14 @@ class ImageEncoder(nn.Module):
 class ImageEncoderSWIN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(ImageEncoderSWIN, self).__init__()
-        self.swin = AutoModel.from_pretrained("microsoft/swin-tiny-patch4-window7-224")
-        with torch.no_grad():
-            flatten_size = self.swin(torch.zeros(1, *input_dim)).pooler_output.shape[1]
-        self.linear = nn.Linear(flatten_size, output_dim)
+        config = Swinv2Config(
+            image_size=input_dim[1],
+            num_channels=input_dim[0],
+            embed_dim=48,
+        )
+        self.main = Swinv2Model(config)
+        self.linear = nn.Linear(config.hidden_size, output_dim)
     
     def forward(self, x):
-        with torch.no_grad():
-            x = nn.functional.interpolate(x, size=(224, 224), mode='bilinear')
-            x = self.swin(x).pooler_output
-        return self.linear(x)
+        x = self.main(x)
+        return self.linear(x.pooler_output)

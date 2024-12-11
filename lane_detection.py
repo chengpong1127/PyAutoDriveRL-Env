@@ -21,7 +21,7 @@ def lane_detection(image):
     
     lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi/180, threshold=50, minLineLength=40, maxLineGap=5)
     
-    line_image = np.zeros((image.shape[0], image.shape[1], 1), dtype=np.uint8)
+    line_image = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
     if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line[0]

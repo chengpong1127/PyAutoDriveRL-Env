@@ -25,12 +25,14 @@ class CarRLEnvironment(gym.Env):
 
         self.car_service = car_service
         self.car_service.start_with_nothing()
+        self.image_size = (120, 60)
 
         # Observation space includes stacked frames and steering/speed information.
         self.observation_space = spaces.Dict({
-            "image": spaces.Box(low=0, high=255, shape=(480, 960, 3), dtype=np.uint8),
-            "line_image": spaces.Box(low=0, high=255, shape=(480, 960, 1), dtype=np.uint8),
-            "depth_image": spaces.Box(low=0, high=255, shape=(480, 960, 1), dtype=np.uint8),
+            "image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0], 3), dtype=np.uint8),
+            "line_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
+            "depth_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
+            "edge_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
             "steering_angle": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             "throttle": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
             "speed": spaces.Box(low=0.0, high=np.inf, shape=(1,), dtype=np.float32),
@@ -59,6 +61,7 @@ class CarRLEnvironment(gym.Env):
         self.system_delay = car_service.system_delay
         self.progress_queue = deque(maxlen=5)
         self.speed_queue = deque(maxlen=20)
+        self.steer_queue = deque(maxlen=5)
         self.__check_done_use_last_timestamp = 0
         self.__check_done_use_progress = 0
         
@@ -129,14 +132,15 @@ class CarRLEnvironment(gym.Env):
         # Update timestamp and calculate FPS
         time_diff = self.car_service.carData.timestamp - self._last_timestamp
         fps = int(1000 / time_diff) if time_diff > 0 else 0
-        self.display_info(fps, fps/car_data.time_speed_up_scale, reward, car_data)
+        self.display_info(fps, fps/car_data.time_speed_up_scale, reward, car_data, action)
         self._last_timestamp = car_data.timestamp
 
         return self.current_observation, reward, self.done, False, {}
     
-    def display_info(self, fps, unity_fps, reward, car_data):
+    def display_info(self, fps, unity_fps, reward, car_data, action):
         # clear console
         os.system('cls' if os.name == 'nt' else 'clear')
+        print(f"Action: throttle={action[1]:.2f}, steering_angle={action[0]:.2f}")
         print(car_data)
         print(f"FPS: {fps: 05.1f} -> Unity World FPS: {unity_fps: 05.1f}, Reward: {reward: 05.2f}")
     
@@ -151,13 +155,15 @@ class CarRLEnvironment(gym.Env):
         Returns:
             reward (float): The calculated reward based on progress and track position.
         """
-        reward = (self.progress_queue[-1] - self.progress_queue[0]) * 1000 + car_data.velocity_z * 0.005
+        reward = (self.progress_queue[-1] - self.progress_queue[0]) * 1000 + car_data.velocity_z * 0.05 + car_data.speed * 0.05
         if car_data.y < 0:
             reward = -10  # Penalize if off track
         if car_data.obstacle_car == 1:
             reward -= 0.01  # Penalize if there is an obstacle
         if self.progress_queue[-1] - self.progress_queue[0] < 0:
             reward = -10
+        if np.mean(self.speed_queue) < 1:
+            reward -= 10
         
         return reward
 
@@ -222,13 +228,17 @@ class CarRLEnvironment(gym.Env):
         Convert CarData instance to observation space dictionary.
         """
         
-        depth_image = self.depth_model(Image.fromarray(car_data.image))['depth']
-        depth_image = np.array(depth_image).reshape(480, 960, 1)
+        depth_image = np.array(self.depth_model(Image.fromarray(car_data.image))['depth'])
+        lane_detection_result = lane_detection(car_data.image)
+        
+        def resize(image):
+            return cv2.resize(image, self.image_size, interpolation=cv2.INTER_LINEAR)
 
         observation = {
-            "image": car_data.image,
-            "line_image": lane_detection(car_data.image)['line_image'],
-            "depth_image": depth_image,
+            "image": resize(car_data.image),
+            "line_image": resize(lane_detection_result["line_image"]),
+            "edge_image": resize(lane_detection_result["edges"]),
+            "depth_image": resize(depth_image),
             "steering_angle": np.array([car_data.steering_angle], dtype=np.float32),
             "throttle": np.array([car_data.throttle], dtype=np.float32),
             "speed": np.array([car_data.speed], dtype=np.float32),
@@ -248,7 +258,7 @@ class CarRLEnvironment(gym.Env):
         
         
         cv2.imwrite("depth_image.jpg", observation["depth_image"])
-        cv2.imwrite("line_image.jpg", observation["line_image"])
+        cv2.imwrite("edge_image.jpg", observation["edge_image"])
         
         for key, value in observation.items():
             if np.isnan(value).any():
