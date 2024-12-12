@@ -34,19 +34,29 @@ class CustomCNN(BaseFeaturesExtractor):
     def __init__(self, observation_space: spaces.Dict, features_dim: int = 256):
         # Extract the 'image' shape from observation space, assuming image is (64, 64, 3)
         super(CustomCNN, self).__init__(observation_space, features_dim)
-        image_feature_dim = 16
         image_size = observation_space['image'].shape[1:]
-        #self.image_encoder = ImageEncoderSWIN((5, *image_size), image_feature_dim)
-        #self.image_encoder = ImageEncoder((5, *image_size), image_feature_dim)
-        self.depth_encoder = ImageEncoder((1, *image_size), image_feature_dim)
-        self.edge_encoder = ImageEncoder((1, *image_size), image_feature_dim)
-        #self.line_encoder = ImageEncoder((1, *image_size), image_feature_dim)
+        feature_dim = 64
+        self.image_encoder = ImageEncoderSWIN(feature_dim)
+        self.hybrid_encoder = ImageEncoder((5, *image_size), feature_dim)
+        # self.depth_encoder = ImageEncoder((1, *image_size), feature_dim)
+        # self.edge_encoder = ImageEncoder((1, *image_size), feature_dim)
+        # self.line_encoder = ImageEncoder((1, *image_size), feature_dim)
+        # self.optical_flow_encoder = ImageEncoder((2, *image_size), feature_dim)
 
         # Define a fully connected layer to combine CNN output with other inputs (steering/speed)
-        self.mlp = nn.Sequential(
-            nn.BatchNorm1d(image_feature_dim + image_feature_dim + 4),
-            nn.Linear(image_feature_dim + image_feature_dim + 4, features_dim),  # Add steering and speed (2,)
+        self.additional_encoder = nn.Sequential(
+            nn.BatchNorm1d(10),
+            nn.Linear(10, 64),
             nn.ReLU(),
+            nn.BatchNorm1d(64),
+            nn.Linear(64, feature_dim),
+            nn.ReLU(),
+        )
+        self.mlp = nn.Sequential(
+            nn.BatchNorm1d(feature_dim * 3),
+            nn.Linear(feature_dim * 3, 256),  # Add steering and speed (2,)
+            nn.Tanh(),
+            nn.Linear(256, features_dim),
         )
 
     def forward(self, observations):
@@ -59,25 +69,37 @@ class CustomCNN(BaseFeaturesExtractor):
         Returns:
             Tensor: A tensor representing extracted features from image and steering/speed.
         """
-        cat_features = ['steering_angle', 'throttle', 'speed']
+        cat_features = ['steering_angle', 'throttle', 'speed', 'velocity', 'acceleration']
         
         image = observations['image']
         line_image = observations['line_image'].unsqueeze(1)
         depth_image = observations['depth_image'].unsqueeze(1)
         edge_image = observations['edge_image'].unsqueeze(1)
+        optical_flow = observations['optical_flow'].permute(0, 3, 1, 2)
         
         
-        depth_feature = self.depth_encoder(depth_image)
-        
-        edge_feature = self.edge_encoder(edge_image)
-        
-        #hybrid_image = th.cat([image, line_image, depth_image], dim=1)
-        #hybrid_feature = self.image_encoder(hybrid_image)
+        hybrid_image = th.cat([depth_image, edge_image, line_image, optical_flow], dim=1)
+        hybrid_feature = self.hybrid_encoder(hybrid_image)
+        image_feature = self.image_encoder(image)
+        # depth_feature = self.depth_encoder(depth_image)
+        # edge_feature = self.edge_encoder(edge_image)
+        # line_feature = self.line_encoder(line_image)
+        # optical_flow_feature = self.optical_flow_encoder(optical_flow)
+        additional_input = th.cat([observations[cat_feature] for cat_feature in cat_features], dim=1)
+        additional_input = th.cat([additional_input, observations['obstacle_car'].to(th.float32)], dim=1)
+        additional_feature = self.additional_encoder(additional_input)
         
 
-        total_features = th.cat([depth_feature] + [edge_feature] + [observations[cat_feature] for cat_feature in cat_features], dim=1)
-        # concat with obstacle_car
-        total_features = th.cat([total_features, observations['obstacle_car'].to(th.float32)], dim=1)
+        total_features = th.cat(
+            [hybrid_feature] + 
+            [image_feature] +
+            # [depth_feature] + 
+            # [edge_feature] + 
+            # [line_feature] + 
+            # [optical_flow_feature] + 
+            [additional_feature], 
+        dim=1)
+        
         return self.mlp(total_features)
 
 
@@ -100,12 +122,13 @@ if __name__ == '__main__':
     # Define policy arguments with the custom CNN feature extractor
     policy_kwargs = {
         "features_extractor_class": CustomCNN,
-        "features_extractor_kwargs": {"features_dim": 16},  # Change feature dimensions if needed
+        "features_extractor_kwargs": {"features_dim": 256},  # Change feature dimensions if needed
+        "optimizer_kwargs": {"weight_decay": 0.0001},
     }
 
     # Choose between SAC or PPO model (PPO used here for example)
-    #model = SAC("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, batch_size=128, tensorboard_log="run/")
-    model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, n_steps=1024, batch_size=256, n_epochs=10, learning_rate=0.001, tensorboard_log="run/")
+    #model = SAC("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, buffer_size=10000, batch_size=256, tensorboard_log="run/")
+    model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, n_steps=256, batch_size=128, n_epochs=10, learning_rate=0.0003, tensorboard_log="run/")
     # if os.path.exists(f"{model.__class__.__name__}_best_model.zip"):
     #     print("loading model...")
     #     model.load(f"{model.__class__.__name__}_best_model.zip")

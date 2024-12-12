@@ -25,7 +25,7 @@ class CarRLEnvironment(gym.Env):
 
         self.car_service = car_service
         self.car_service.start_with_nothing()
-        self.image_size = (120, 60)
+        self.image_size = (256, 256)
 
         # Observation space includes stacked frames and steering/speed information.
         self.observation_space = spaces.Dict({
@@ -33,6 +33,7 @@ class CarRLEnvironment(gym.Env):
             "line_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
             "depth_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
             "edge_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
+            "optical_flow": spaces.Box(low=-np.inf, high=np.inf, shape=(self.image_size[1], self.image_size[0], 2), dtype=np.float32),
             "steering_angle": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             "throttle": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
             "speed": spaces.Box(low=0.0, high=np.inf, shape=(1,), dtype=np.float32),
@@ -52,7 +53,7 @@ class CarRLEnvironment(gym.Env):
 
         # Action space: steering angle (-1 to 1) and throttle (0 to 1)
         self.action_space = spaces.Box(low=np.array([-1.0, -1.0]), high=np.array([1.0, 1.0]), dtype=np.float32)
-
+        #self.action_space = spaces.MultiDiscrete([9, 4])
         # Initialize observation and other variables
         self.current_observation = None
         self.done = False
@@ -60,8 +61,8 @@ class CarRLEnvironment(gym.Env):
         self.start_time = None
         self.system_delay = car_service.system_delay
         self.progress_queue = deque(maxlen=5)
-        self.speed_queue = deque(maxlen=20)
-        self.steer_queue = deque(maxlen=5)
+        self.speed_queue = deque(maxlen=10)
+        self.image_queue = deque(maxlen=3)
         self.__check_done_use_last_timestamp = 0
         self.__check_done_use_progress = 0
         
@@ -114,7 +115,28 @@ class CarRLEnvironment(gym.Env):
             truncated (bool): Whether the episode is truncated (always False here).
             info (dict): Additional info (empty in this case).
         """
+        
+        steering_angle_map = {
+            0: 1.0,
+            1: 0.75,
+            2: 0.5,
+            3: 0.25,
+            4: 0.0,
+            5: -0.25,
+            6: -0.5,
+            7: -0.75,
+            8: -1.0
+        }
+        
+        throttle_map = {
+            0: 1.0,
+            1: 0.5,
+            2: 0.0,
+            3: -0.5,
+        }
+        
         # DO NOT CHANGE THE FOLLOWING CODE
+        #steering_angle, throttle = steering_angle_map[action[0]], throttle_map[action[1]]
         steering_angle, throttle = action
         self.car_service.send_control(steering_angle, throttle)
         self.car_service.wait_for_new_data()
@@ -123,6 +145,7 @@ class CarRLEnvironment(gym.Env):
         car_data = self.car_service.carData
         self.progress_queue.append(float(car_data.progress))
         self.speed_queue.append(float(car_data.speed))
+        self.image_queue.append(car_data.image)
 
         self.current_observation = self.car_data_to_observation(car_data)
 
@@ -155,15 +178,11 @@ class CarRLEnvironment(gym.Env):
         Returns:
             reward (float): The calculated reward based on progress and track position.
         """
-        reward = (self.progress_queue[-1] - self.progress_queue[0]) * 1000 + car_data.velocity_z * 0.05 + car_data.speed * 0.05
-        if car_data.y < 0:
-            reward = -10  # Penalize if off track
-        if car_data.obstacle_car == 1:
-            reward -= 0.01  # Penalize if there is an obstacle
-        if self.progress_queue[-1] - self.progress_queue[0] < 0:
+        reward = (self.progress_queue[-1] - self.progress_queue[0]) * 1000 + car_data.velocity_z * 0.005
+        if car_data.y < 0 or len(self.speed_queue) > 8 and np.mean(self.speed_queue) < 0.1:
             reward = -10
-        if np.mean(self.speed_queue) < 1:
-            reward -= 10
+        if car_data.obstacle_car == 1:
+            reward -= 0.5  # Penalize if there is an obstacle
         
         return reward
 
@@ -180,13 +199,13 @@ class CarRLEnvironment(gym.Env):
         if car_data.y < 0 or car_data.progress >= 100.0:
             return True
 
-        if car_data.timestamp - self.__check_done_use_last_timestamp > 30_000 / car_data.time_speed_up_scale:
+        if car_data.timestamp - self.__check_done_use_last_timestamp > 20_000 / car_data.time_speed_up_scale:
             if car_data.progress - self.__check_done_use_progress < 0.001:
                 return True
             self.__check_done_use_last_timestamp = car_data.timestamp
             self.__check_done_use_progress = car_data.progress
         
-        if len(self.speed_queue) > 15 and np.mean(self.speed_queue) < 0.05:
+        if len(self.speed_queue) > 8 and np.mean(self.speed_queue) < 0.1:
             print("Car is stuck!")
             return True
 
@@ -222,6 +241,20 @@ class CarRLEnvironment(gym.Env):
         Clean up any resources (e.g., close OpenCV windows).
         """
         cv2.destroyAllWindows()
+    
+    def get_optical_flow(self):
+        """
+        Get optical flow between two images.
+        """
+        if len(self.image_queue) < 2:
+            return np.zeros((self.image_size[1], self.image_size[0], 2), dtype=np.float32)
+        
+        pre_image = self.image_queue[0]
+        next_image = self.image_queue[-1]
+        pre_image = cv2.cvtColor(pre_image, cv2.COLOR_RGB2GRAY)
+        next_image = cv2.cvtColor(next_image, cv2.COLOR_RGB2GRAY)
+        flow = cv2.calcOpticalFlowFarneback(pre_image, next_image, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+        return flow.astype(np.float32)
         
     def car_data_to_observation(self, car_data):
         """
@@ -239,6 +272,7 @@ class CarRLEnvironment(gym.Env):
             "line_image": resize(lane_detection_result["line_image"]),
             "edge_image": resize(lane_detection_result["edges"]),
             "depth_image": resize(depth_image),
+            "optical_flow": resize(self.get_optical_flow()),
             "steering_angle": np.array([car_data.steering_angle], dtype=np.float32),
             "throttle": np.array([car_data.throttle], dtype=np.float32),
             "speed": np.array([car_data.speed], dtype=np.float32),
