@@ -33,6 +33,7 @@ class CarRLEnvironment(gym.Env):
             "line_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
             "depth_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
             "edge_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
+            "road_segmentation_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
             "optical_flow": spaces.Box(low=-np.inf, high=np.inf, shape=(self.image_size[1], self.image_size[0], 2), dtype=np.float32),
             "steering_angle": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             "throttle": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
@@ -44,6 +45,7 @@ class CarRLEnvironment(gym.Env):
             "orientation": spaces.Box(low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32),
             "brake_input": spaces.Box(low=0.0, high=1.0, shape=(1,), dtype=np.float32),
             "progress": spaces.Box(low=0.0, high=100.0, shape=(1,), dtype=np.float32),
+            "progress_diff": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             "timestamp": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.int64),
             "y": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             "time_speed_up_scale": spaces.Box(low=0.0, high=np.inf, shape=(1,), dtype=np.float32),
@@ -60,13 +62,14 @@ class CarRLEnvironment(gym.Env):
         self._last_timestamp = 0
         self.start_time = None
         self.system_delay = car_service.system_delay
-        self.progress_queue = deque(maxlen=5)
+        self.progress_queue = deque(maxlen=2)
         self.speed_queue = deque(maxlen=10)
         self.image_queue = deque(maxlen=3)
         self.__check_done_use_last_timestamp = 0
         self.__check_done_use_progress = 0
         
         self.depth_model = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf", device='cuda')
+        self.segmentation_model = pipeline("image-segmentation", model="nvidia/segformer-b0-finetuned-ade-512-512", device='cuda')
 
         # Wait for connection and data
         while not (self.car_service.client_connected and self.car_service.initial_data_received):
@@ -262,10 +265,19 @@ class CarRLEnvironment(gym.Env):
         """
         
         depth_image = np.array(self.depth_model(Image.fromarray(car_data.image))['depth'])
+        segmentation_result = self.segmentation_model(Image.fromarray(car_data.image))
+        road_segmentation = [result['mask'] for result in segmentation_result if result['label'] == 'road']
+        if len(road_segmentation) > 0:
+            road_segmentation = np.array(road_segmentation[0], dtype=np.uint8)
+        else:
+            road_segmentation = np.zeros(car_data.image.shape[:2], dtype=np.uint8)
+        
         lane_detection_result = lane_detection(car_data.image)
         
         def resize(image):
             return cv2.resize(image, self.image_size, interpolation=cv2.INTER_LINEAR)
+        
+        progress_diff = self.progress_queue[-1] - self.progress_queue[0] if len(self.progress_queue) > 1 else 0.0
 
         observation = {
             "image": resize(car_data.image),
@@ -273,6 +285,7 @@ class CarRLEnvironment(gym.Env):
             "edge_image": resize(lane_detection_result["edges"]),
             "depth_image": resize(depth_image),
             "optical_flow": resize(self.get_optical_flow()),
+            "road_segmentation_image": resize(road_segmentation),
             "steering_angle": np.array([car_data.steering_angle], dtype=np.float32),
             "throttle": np.array([car_data.throttle], dtype=np.float32),
             "speed": np.array([car_data.speed], dtype=np.float32),
@@ -283,6 +296,7 @@ class CarRLEnvironment(gym.Env):
             "orientation": np.array([car_data.yaw, car_data.pitch, car_data.roll], dtype=np.float32),
             "brake_input": np.array([car_data.brake_input], dtype=np.float32),
             "progress": np.array([car_data.progress], dtype=np.float32),
+            "progress_diff": np.array([progress_diff], dtype=np.float32),
             "timestamp": np.array([car_data.timestamp], dtype=np.int64),
             "y": np.array([car_data.y], dtype=np.float32),
             "time_speed_up_scale": np.array([car_data.time_speed_up_scale], dtype=np.float32),

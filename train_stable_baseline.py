@@ -37,7 +37,7 @@ class CustomCNN(BaseFeaturesExtractor):
         image_size = observation_space['image'].shape[1:]
         feature_dim = 64
         self.image_encoder = ImageEncoderSWIN(feature_dim)
-        self.hybrid_encoder = ImageEncoder((5, *image_size), feature_dim)
+        self.hybrid_encoder = ImageEncoder((6, *image_size), feature_dim)
         # self.depth_encoder = ImageEncoder((1, *image_size), feature_dim)
         # self.edge_encoder = ImageEncoder((1, *image_size), feature_dim)
         # self.line_encoder = ImageEncoder((1, *image_size), feature_dim)
@@ -45,8 +45,8 @@ class CustomCNN(BaseFeaturesExtractor):
 
         # Define a fully connected layer to combine CNN output with other inputs (steering/speed)
         self.additional_encoder = nn.Sequential(
-            nn.BatchNorm1d(10),
-            nn.Linear(10, 64),
+            nn.BatchNorm1d(11),
+            nn.Linear(11, 64),
             nn.ReLU(),
             nn.BatchNorm1d(64),
             nn.Linear(64, feature_dim),
@@ -69,16 +69,17 @@ class CustomCNN(BaseFeaturesExtractor):
         Returns:
             Tensor: A tensor representing extracted features from image and steering/speed.
         """
-        cat_features = ['steering_angle', 'throttle', 'speed', 'velocity', 'acceleration']
+        cat_features = ['steering_angle', 'throttle', 'speed', 'velocity', 'acceleration', 'progress_diff']
         
         image = observations['image']
         line_image = observations['line_image'].unsqueeze(1)
         depth_image = observations['depth_image'].unsqueeze(1)
         edge_image = observations['edge_image'].unsqueeze(1)
         optical_flow = observations['optical_flow'].permute(0, 3, 1, 2)
+        road_segmentation = observations['road_segmentation_image'].unsqueeze(1)
         
         
-        hybrid_image = th.cat([depth_image, edge_image, line_image, optical_flow], dim=1)
+        hybrid_image = th.cat([depth_image, edge_image, line_image, optical_flow, road_segmentation], dim=1)
         hybrid_feature = self.hybrid_encoder(hybrid_image)
         image_feature = self.image_encoder(image)
         # depth_feature = self.depth_encoder(depth_image)
