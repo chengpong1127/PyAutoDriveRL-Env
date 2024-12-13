@@ -25,7 +25,7 @@ class CarRLEnvironment(gym.Env):
 
         self.car_service = car_service
         self.car_service.start_with_nothing()
-        self.image_size = (256, 256)
+        self.image_size = (64, 64)
 
         # Observation space includes stacked frames and steering/speed information.
         self.observation_space = spaces.Dict({

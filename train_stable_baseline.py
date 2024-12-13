@@ -116,13 +116,13 @@ if __name__ == '__main__':
     # Define policy arguments with the custom CNN feature extractor
     policy_kwargs = {
         "features_extractor_class": CustomCNN,
-        "features_extractor_kwargs": {"features_dim": 256},  # Change feature dimensions if needed
+        "features_extractor_kwargs": {"features_dim": 128},  # Change feature dimensions if needed
         "optimizer_kwargs": {"weight_decay": 0.0001},
     }
 
     # Choose between SAC or PPO model (PPO used here for example)
     #model = SAC("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, buffer_size=10000, batch_size=256, tensorboard_log="run/")
-    model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, n_steps=1024, batch_size=128, n_epochs=10, learning_rate=0.0003, tensorboard_log="run/")
+    model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, n_steps=256, batch_size=128, n_epochs=10, learning_rate=0.0003, tensorboard_log="run/")
     model_path = "result/model.zip"
     if os.path.exists(model_path):
         print("loading model...")

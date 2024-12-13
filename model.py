@@ -6,11 +6,9 @@ import torchvision.transforms as T
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride, padding, pool_type="avg"):
         super(ConvBlock, self).__init__()
-        pool_layer = nn.AvgPool2d(2) if pool_type == "avg" else nn.MaxPool2d(2)
         self.block = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding),
             nn.ReLU(),
-            pool_layer
         )
 
     def forward(self, x):
@@ -20,10 +18,9 @@ class ImageEncoder(nn.Module):
     def __init__(self, input_dim, output_dim, pool_type="avg"):
         super(ImageEncoder, self).__init__()
         self.main = nn.Sequential(
-            ConvBlock(input_dim[0], 32, kernel_size=5, stride=2, padding=1, pool_type=pool_type),
-            ConvBlock(32, 32, kernel_size=5, stride=2, padding=1, pool_type=pool_type),
-            ConvBlock(32, 32, kernel_size=3, stride=2, padding=1, pool_type=pool_type),
-            ConvBlock(32, 32, kernel_size=3, stride=2, padding=1, pool_type=pool_type),
+            ConvBlock(input_dim[0], 32, kernel_size=9, stride=2, padding=0, pool_type=pool_type),
+            ConvBlock(32, 64, kernel_size=5, stride=2, padding=0, pool_type=pool_type),
+            ConvBlock(64, 64, kernel_size=3, stride=2, padding=0, pool_type=pool_type),
             nn.Flatten(),
         )
         with torch.no_grad():
