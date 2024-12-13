@@ -8,7 +8,6 @@ class ConvBlock(nn.Module):
         super(ConvBlock, self).__init__()
         pool_layer = nn.AvgPool2d(2) if pool_type == "avg" else nn.MaxPool2d(2)
         self.block = nn.Sequential(
-            nn.BatchNorm2d(in_channels),
             nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding),
             nn.ReLU(),
             pool_layer

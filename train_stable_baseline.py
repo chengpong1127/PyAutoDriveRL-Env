@@ -37,26 +37,19 @@ class CustomCNN(BaseFeaturesExtractor):
         image_size = observation_space['image'].shape[1:]
         feature_dim = 64
         self.image_encoder = ImageEncoderSWIN(feature_dim)
-        self.hybrid_encoder = ImageEncoder((6, *image_size), feature_dim)
+        self.hybrid_encoder = ImageEncoder((4, *image_size), feature_dim, 'max')
         # self.depth_encoder = ImageEncoder((1, *image_size), feature_dim)
         # self.edge_encoder = ImageEncoder((1, *image_size), feature_dim)
         # self.line_encoder = ImageEncoder((1, *image_size), feature_dim)
         # self.optical_flow_encoder = ImageEncoder((2, *image_size), feature_dim)
 
         # Define a fully connected layer to combine CNN output with other inputs (steering/speed)
-        self.additional_encoder = nn.Sequential(
-            nn.BatchNorm1d(11),
-            nn.Linear(11, 64),
-            nn.ReLU(),
-            nn.BatchNorm1d(64),
-            nn.Linear(64, feature_dim),
-            nn.ReLU(),
-        )
+        # self.additional_encoder = nn.Sequential(
+        #     nn.Linear(21, feature_dim),
+        #     nn.ReLU(),
+        # )
         self.mlp = nn.Sequential(
-            nn.BatchNorm1d(feature_dim * 3),
-            nn.Linear(feature_dim * 3, 256),  # Add steering and speed (2,)
-            nn.Tanh(),
-            nn.Linear(256, features_dim),
+            nn.Linear(feature_dim * 2 + 15, features_dim),  # Add steering and speed (2,)
         )
 
     def forward(self, observations):
@@ -69,7 +62,7 @@ class CustomCNN(BaseFeaturesExtractor):
         Returns:
             Tensor: A tensor representing extracted features from image and steering/speed.
         """
-        cat_features = ['steering_angle', 'throttle', 'speed', 'velocity', 'acceleration', 'progress_diff']
+        cat_features = ['steering_angle', 'throttle', 'speed', 'progress_diff', 'steering_angle_queue', 'throttle_queue']
         
         image = observations['image']
         line_image = observations['line_image'].unsqueeze(1)
@@ -79,7 +72,7 @@ class CustomCNN(BaseFeaturesExtractor):
         road_segmentation = observations['road_segmentation_image'].unsqueeze(1)
         
         
-        hybrid_image = th.cat([depth_image, edge_image, line_image, optical_flow, road_segmentation], dim=1)
+        hybrid_image = th.cat([depth_image, optical_flow, road_segmentation], dim=1)
         hybrid_feature = self.hybrid_encoder(hybrid_image)
         image_feature = self.image_encoder(image)
         # depth_feature = self.depth_encoder(depth_image)
@@ -88,7 +81,7 @@ class CustomCNN(BaseFeaturesExtractor):
         # optical_flow_feature = self.optical_flow_encoder(optical_flow)
         additional_input = th.cat([observations[cat_feature] for cat_feature in cat_features], dim=1)
         additional_input = th.cat([additional_input, observations['obstacle_car'].to(th.float32)], dim=1)
-        additional_feature = self.additional_encoder(additional_input)
+        #additional_feature = self.additional_encoder(additional_input)
         
 
         total_features = th.cat(
@@ -98,7 +91,7 @@ class CustomCNN(BaseFeaturesExtractor):
             # [edge_feature] + 
             # [line_feature] + 
             # [optical_flow_feature] + 
-            [additional_feature], 
+            [additional_input], 
         dim=1)
         
         return self.mlp(total_features)
@@ -129,14 +122,15 @@ if __name__ == '__main__':
 
     # Choose between SAC or PPO model (PPO used here for example)
     #model = SAC("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, buffer_size=10000, batch_size=256, tensorboard_log="run/")
-    model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, n_steps=256, batch_size=128, n_epochs=10, learning_rate=0.0003, tensorboard_log="run/")
-    # if os.path.exists(f"{model.__class__.__name__}_best_model.zip"):
-    #     print("loading model...")
-    #     model.load(f"{model.__class__.__name__}_best_model.zip")
+    model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, n_steps=1024, batch_size=128, n_epochs=10, learning_rate=0.0003, tensorboard_log="run/")
+    model_path = "result/model.zip"
+    if os.path.exists(model_path):
+        print("loading model...")
+        model.load(model_path)
 
     # Set training parameters
-    total_timesteps = 2048  # Number of timesteps to train in each loop
-    save_interval = 1000  # How often to save the model (in timesteps)
+    total_timesteps = 8192  # Number of timesteps to train in each loop
+    save_interval = 256  # How often to save the model (in timesteps)
     best_reward = -np.inf  # Initial best reward
     best_model_path = f"{model.__class__.__name__}_best_model"  # Path to save the best model
     latest_model_path = f"{model.__class__.__name__}_latest_model"  # Path to save the latest model
@@ -154,7 +148,7 @@ if __name__ == '__main__':
         """
 
         # Train the model for a specified number of timesteps
-        model.learn(total_timesteps=total_timesteps, reset_num_timesteps=False, callback=WandbCallback(gradient_save_freq = 100))
+        model.learn(total_timesteps=total_timesteps, reset_num_timesteps=False, callback=WandbCallback(model_save_path = 'result/', model_save_freq = save_interval))
 
         # Save the latest model after each training step
         print(f"Saving latest model: {latest_model_path}")

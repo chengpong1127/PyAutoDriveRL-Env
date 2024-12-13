@@ -50,7 +50,9 @@ class CarRLEnvironment(gym.Env):
             "y": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
             "time_speed_up_scale": spaces.Box(low=0.0, high=np.inf, shape=(1,), dtype=np.float32),
             "manual_control": spaces.MultiBinary(1),
-            "obstacle_car": spaces.MultiBinary(1)
+            "obstacle_car": spaces.MultiBinary(1),
+            "steering_angle_queue": spaces.Box(low=-0.2, high=0.2, shape=(5,), dtype=np.float32),
+            "throttle_queue": spaces.Box(low=-1.0, high=1.0, shape=(5,), dtype=np.float32),
         })
 
         # Action space: steering angle (-1 to 1) and throttle (0 to 1)
@@ -65,6 +67,8 @@ class CarRLEnvironment(gym.Env):
         self.progress_queue = deque(maxlen=2)
         self.speed_queue = deque(maxlen=10)
         self.image_queue = deque(maxlen=3)
+        self.steering_angle_queue = deque(maxlen=5)
+        self.throttle_queue = deque(maxlen=5)
         self.__check_done_use_last_timestamp = 0
         self.__check_done_use_progress = 0
         
@@ -88,7 +92,7 @@ class CarRLEnvironment(gym.Env):
             info (dict): Additional information (empty in this case).
         """
         self.done = False
-        self.car_service.send_control(0, 0, 1)  # Send stop command for a clean reset
+        self.car_service.send_control(0, 0, 5)  # Send stop command for a clean reset
         self.car_service.wait_for_new_data()
 
         car_data = self.car_service.carData
@@ -99,8 +103,14 @@ class CarRLEnvironment(gym.Env):
         self._last_timestamp = car_data.timestamp
         self.progress_queue.clear()
         self.speed_queue.clear()
+        self.image_queue.clear()
+        self.steering_angle_queue.clear()
+        self.throttle_queue.clear()
         self.__check_done_use_last_timestamp = car_data.timestamp
         self.__check_done_use_progress = 0
+        
+        #self.current_throttle = 0.3
+        self.current_steering_angle = 0.0
 
         return self.current_observation, {}
 
@@ -149,6 +159,8 @@ class CarRLEnvironment(gym.Env):
         self.progress_queue.append(float(car_data.progress))
         self.speed_queue.append(float(car_data.speed))
         self.image_queue.append(car_data.image)
+        self.steering_angle_queue.append(steering_angle)
+        self.throttle_queue.append(throttle)
 
         self.current_observation = self.car_data_to_observation(car_data)
 
@@ -166,7 +178,6 @@ class CarRLEnvironment(gym.Env):
     def display_info(self, fps, unity_fps, reward, car_data, action):
         # clear console
         os.system('cls' if os.name == 'nt' else 'clear')
-        print(f"Action: throttle={action[1]:.2f}, steering_angle={action[0]:.2f}")
         print(car_data)
         print(f"FPS: {fps: 05.1f} -> Unity World FPS: {unity_fps: 05.1f}, Reward: {reward: 05.2f}")
     
@@ -182,10 +193,12 @@ class CarRLEnvironment(gym.Env):
             reward (float): The calculated reward based on progress and track position.
         """
         reward = (self.progress_queue[-1] - self.progress_queue[0]) * 1000 + car_data.velocity_z * 0.005
+        if len(self.steering_angle_queue) > 1:
+            reward -= (self.steering_angle_queue[-1] - self.steering_angle_queue[-2]) ** 2
         if car_data.y < 0 or len(self.speed_queue) > 8 and np.mean(self.speed_queue) < 0.1:
             reward = -10
-        if car_data.obstacle_car == 1:
-            reward -= 0.5  # Penalize if there is an obstacle
+        # if car_data.obstacle_car == 1:
+        #     reward -= 0.1  # Penalize if there is an obstacle
         
         return reward
 
@@ -278,6 +291,13 @@ class CarRLEnvironment(gym.Env):
             return cv2.resize(image, self.image_size, interpolation=cv2.INTER_LINEAR)
         
         progress_diff = self.progress_queue[-1] - self.progress_queue[0] if len(self.progress_queue) > 1 else 0.0
+        steering_angle_queue = list(self.steering_angle_queue)
+        while len(steering_angle_queue) < 5:
+            steering_angle_queue.append(0.0)
+        
+        throttle_queue = list(self.throttle_queue)
+        while len(throttle_queue) < 5:
+            throttle_queue.append(0.0)
 
         observation = {
             "image": resize(car_data.image),
@@ -301,7 +321,10 @@ class CarRLEnvironment(gym.Env):
             "y": np.array([car_data.y], dtype=np.float32),
             "time_speed_up_scale": np.array([car_data.time_speed_up_scale], dtype=np.float32),
             "manual_control": np.array([car_data.manual_control], dtype=np.int8),
-            "obstacle_car": np.array([car_data.obstacle_car], dtype=np.int8)
+            "obstacle_car": np.array([car_data.obstacle_car], dtype=np.int8),
+            "steering_angle_queue": np.array(steering_angle_queue, dtype=np.float32),
+            "throttle_queue": np.array(throttle_queue, dtype=np.float32),
+            
         }
         
         
