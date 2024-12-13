@@ -25,14 +25,13 @@ class CarRLEnvironment(gym.Env):
 
         self.car_service = car_service
         self.car_service.start_with_nothing()
-        self.image_size = (64, 64)
+        self.image_size = (120, 60)
 
         # Observation space includes stacked frames and steering/speed information.
         self.observation_space = spaces.Dict({
             "image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0], 3), dtype=np.uint8),
             "line_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
             "depth_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
-            "edge_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
             "road_segmentation_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
             "optical_flow": spaces.Box(low=-np.inf, high=np.inf, shape=(self.image_size[1], self.image_size[0], 2), dtype=np.float32),
             "steering_angle": spaces.Box(low=-np.inf, high=np.inf, shape=(1,), dtype=np.float32),
@@ -73,7 +72,7 @@ class CarRLEnvironment(gym.Env):
         self.__check_done_use_progress = 0
         
         self.depth_model = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf", device='cuda')
-        self.segmentation_model = pipeline("image-segmentation", model="nvidia/segformer-b0-finetuned-ade-512-512", device='cuda')
+        self.segmentation_model = pipeline("image-segmentation", model="nvidia/segformer-b5-finetuned-ade-640-640", device='cuda')
 
         # Wait for connection and data
         while not (self.car_service.client_connected and self.car_service.initial_data_received):
@@ -92,7 +91,7 @@ class CarRLEnvironment(gym.Env):
             info (dict): Additional information (empty in this case).
         """
         self.done = False
-        self.car_service.send_control(0, 0, 5)  # Send stop command for a clean reset
+        self.car_service.send_control(0, 0, 1)  # Send stop command for a clean reset
         self.car_service.wait_for_new_data()
 
         car_data = self.car_service.carData
@@ -129,27 +128,7 @@ class CarRLEnvironment(gym.Env):
             info (dict): Additional info (empty in this case).
         """
         
-        steering_angle_map = {
-            0: 1.0,
-            1: 0.75,
-            2: 0.5,
-            3: 0.25,
-            4: 0.0,
-            5: -0.25,
-            6: -0.5,
-            7: -0.75,
-            8: -1.0
-        }
-        
-        throttle_map = {
-            0: 1.0,
-            1: 0.5,
-            2: 0.0,
-            3: -0.5,
-        }
-        
         # DO NOT CHANGE THE FOLLOWING CODE
-        #steering_angle, throttle = steering_angle_map[action[0]], throttle_map[action[1]]
         steering_angle, throttle = action
         self.car_service.send_control(steering_angle, throttle)
         self.car_service.wait_for_new_data()
@@ -193,8 +172,9 @@ class CarRLEnvironment(gym.Env):
             reward (float): The calculated reward based on progress and track position.
         """
         reward = (self.progress_queue[-1] - self.progress_queue[0]) * 1000 + car_data.velocity_z * 0.005
-        if len(self.steering_angle_queue) > 1:
-            reward -= (self.steering_angle_queue[-1] - self.steering_angle_queue[-2]) ** 2
+        # if len(self.steering_angle_queue) > 1:
+        #     reward -= (self.steering_angle_queue[-1] - self.steering_angle_queue[-2]) ** 2
+        reward += self.current_observation['road_segmentation_image'].mean() / 256.0 * 0.1
         if car_data.y < 0 or len(self.speed_queue) > 8 and np.mean(self.speed_queue) < 0.1:
             reward = -10
         # if car_data.obstacle_car == 1:
@@ -263,7 +243,7 @@ class CarRLEnvironment(gym.Env):
         Get optical flow between two images.
         """
         if len(self.image_queue) < 2:
-            return np.zeros((self.image_size[1], self.image_size[0], 2), dtype=np.float32)
+            return np.zeros((480, 960, 2), dtype=np.float32)
         
         pre_image = self.image_queue[0]
         next_image = self.image_queue[-1]
@@ -279,15 +259,28 @@ class CarRLEnvironment(gym.Env):
         
         depth_image = np.array(self.depth_model(Image.fromarray(car_data.image))['depth'])
         segmentation_result = self.segmentation_model(Image.fromarray(car_data.image))
-        road_segmentation = [result['mask'] for result in segmentation_result if result['label'] == 'road']
+        road_segmentation = [np.array(result['mask']) for result in segmentation_result if result['label'] in ['road', 'earth', 'building']]
+        
+        # debug: save segmentation result
+        original_image = Image.fromarray(car_data.image)
+        # add segmentation result to the image
+        for result in segmentation_result:
+            mask = np.array(result['mask'])
+            mask = np.stack([mask, mask, mask], axis=-1)
+            original_image = Image.blend(original_image, Image.fromarray(mask), alpha=0.5)
+            
+        original_image.save("segmentation_result.jpg")
+        
         if len(road_segmentation) > 0:
-            road_segmentation = np.array(road_segmentation[0], dtype=np.uint8)
+            # or all the road labels
+            road_segmentation = np.sum(np.array(road_segmentation), axis=0, dtype=np.uint8)
         else:
             road_segmentation = np.zeros(car_data.image.shape[:2], dtype=np.uint8)
         
         lane_detection_result = lane_detection(car_data.image)
         
         def resize(image):
+            image = image[240: 360, :]
             return cv2.resize(image, self.image_size, interpolation=cv2.INTER_LINEAR)
         
         progress_diff = self.progress_queue[-1] - self.progress_queue[0] if len(self.progress_queue) > 1 else 0.0
@@ -302,7 +295,6 @@ class CarRLEnvironment(gym.Env):
         observation = {
             "image": resize(car_data.image),
             "line_image": resize(lane_detection_result["line_image"]),
-            "edge_image": resize(lane_detection_result["edges"]),
             "depth_image": resize(depth_image),
             "optical_flow": resize(self.get_optical_flow()),
             "road_segmentation_image": resize(road_segmentation),
@@ -324,8 +316,17 @@ class CarRLEnvironment(gym.Env):
             "obstacle_car": np.array([car_data.obstacle_car], dtype=np.int8),
             "steering_angle_queue": np.array(steering_angle_queue, dtype=np.float32),
             "throttle_queue": np.array(throttle_queue, dtype=np.float32),
-            
         }
+        
+        cv2.imwrite("images/initial_image.jpg", car_data.image)
+        cv2.imwrite("images/image.jpg", observation["image"])
+        cv2.imwrite("images/line_image.jpg", observation["line_image"])
+        cv2.imwrite("images/optical_flow_x.jpg", observation["optical_flow"][:, :, 0])
+        cv2.imwrite("images/optical_flow_y.jpg", observation["optical_flow"][:, :, 1])
+        cv2.imwrite("images/road_segmentation_image.jpg", observation["road_segmentation_image"])
+        
+        
+        
         
         
         for key, value in observation.items():

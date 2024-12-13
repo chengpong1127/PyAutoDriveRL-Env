@@ -20,7 +20,6 @@ class ImageEncoder(nn.Module):
         self.main = nn.Sequential(
             ConvBlock(input_dim[0], 32, kernel_size=9, stride=2, padding=0, pool_type=pool_type),
             ConvBlock(32, 64, kernel_size=5, stride=2, padding=0, pool_type=pool_type),
-            ConvBlock(64, 64, kernel_size=3, stride=2, padding=0, pool_type=pool_type),
             nn.Flatten(),
         )
         with torch.no_grad():

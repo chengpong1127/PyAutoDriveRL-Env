@@ -35,21 +35,11 @@ class CustomCNN(BaseFeaturesExtractor):
         # Extract the 'image' shape from observation space, assuming image is (64, 64, 3)
         super(CustomCNN, self).__init__(observation_space, features_dim)
         image_size = observation_space['image'].shape[1:]
-        feature_dim = 64
-        self.image_encoder = ImageEncoderSWIN(feature_dim)
-        self.hybrid_encoder = ImageEncoder((4, *image_size), feature_dim, 'max')
-        # self.depth_encoder = ImageEncoder((1, *image_size), feature_dim)
-        # self.edge_encoder = ImageEncoder((1, *image_size), feature_dim)
-        # self.line_encoder = ImageEncoder((1, *image_size), feature_dim)
-        # self.optical_flow_encoder = ImageEncoder((2, *image_size), feature_dim)
-
-        # Define a fully connected layer to combine CNN output with other inputs (steering/speed)
-        # self.additional_encoder = nn.Sequential(
-        #     nn.Linear(21, feature_dim),
-        #     nn.ReLU(),
-        # )
+        feature_dim = 32
+        #self.image_encoder = ImageEncoderSWIN(feature_dim)
+        self.hybrid_encoder = ImageEncoder((2, *image_size), feature_dim)
         self.mlp = nn.Sequential(
-            nn.Linear(feature_dim * 2 + 15, features_dim),  # Add steering and speed (2,)
+            nn.Linear(feature_dim * 1 + 4, features_dim),  # Add steering and speed (2,)
         )
 
     def forward(self, observations):
@@ -62,35 +52,24 @@ class CustomCNN(BaseFeaturesExtractor):
         Returns:
             Tensor: A tensor representing extracted features from image and steering/speed.
         """
-        cat_features = ['steering_angle', 'throttle', 'speed', 'progress_diff', 'steering_angle_queue', 'throttle_queue']
+        cat_features = ['steering_angle', 'throttle', 'speed']
         
-        image = observations['image']
+        #image = observations['image']
         line_image = observations['line_image'].unsqueeze(1)
         depth_image = observations['depth_image'].unsqueeze(1)
-        edge_image = observations['edge_image'].unsqueeze(1)
         optical_flow = observations['optical_flow'].permute(0, 3, 1, 2)
         road_segmentation = observations['road_segmentation_image'].unsqueeze(1)
         
         
-        hybrid_image = th.cat([depth_image, optical_flow, road_segmentation], dim=1)
+        hybrid_image = th.cat([line_image, road_segmentation], dim=1)
         hybrid_feature = self.hybrid_encoder(hybrid_image)
-        image_feature = self.image_encoder(image)
-        # depth_feature = self.depth_encoder(depth_image)
-        # edge_feature = self.edge_encoder(edge_image)
-        # line_feature = self.line_encoder(line_image)
-        # optical_flow_feature = self.optical_flow_encoder(optical_flow)
+        #image_feature = self.image_encoder(image)
         additional_input = th.cat([observations[cat_feature] for cat_feature in cat_features], dim=1)
         additional_input = th.cat([additional_input, observations['obstacle_car'].to(th.float32)], dim=1)
-        #additional_feature = self.additional_encoder(additional_input)
-        
 
         total_features = th.cat(
             [hybrid_feature] + 
-            [image_feature] +
-            # [depth_feature] + 
-            # [edge_feature] + 
-            # [line_feature] + 
-            # [optical_flow_feature] + 
+            #[image_feature] +
             [additional_input], 
         dim=1)
         
@@ -116,7 +95,7 @@ if __name__ == '__main__':
     # Define policy arguments with the custom CNN feature extractor
     policy_kwargs = {
         "features_extractor_class": CustomCNN,
-        "features_extractor_kwargs": {"features_dim": 128},  # Change feature dimensions if needed
+        "features_extractor_kwargs": {"features_dim": 64},  # Change feature dimensions if needed
         "optimizer_kwargs": {"weight_decay": 0.0001},
     }
 
