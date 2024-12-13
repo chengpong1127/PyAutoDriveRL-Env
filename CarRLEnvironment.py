@@ -51,7 +51,7 @@ class CarRLEnvironment(gym.Env):
             "time_speed_up_scale": spaces.Box(low=0.0, high=np.inf, shape=(1,), dtype=np.float32),
             "manual_control": spaces.MultiBinary(1),
             "obstacle_car": spaces.MultiBinary(1),
-            "steering_angle_queue": spaces.Box(low=-0.2, high=0.2, shape=(5,), dtype=np.float32),
+            "steering_angle_queue": spaces.Box(low=-1.0, high=1.0, shape=(5,), dtype=np.float32),
             "throttle_queue": spaces.Box(low=-1.0, high=1.0, shape=(5,), dtype=np.float32),
         })
 
