@@ -64,13 +64,15 @@ if __name__ == '__main__':
     # Initialize the car service with a system delay (adjust for performance)
     # system_delay: It is recommended to set 0.1 seconds
     car_service = CarSocketService(system_delay=0.1)
+    env = CarRLEnvironment(car_service)
 
     policy_kwargs = {
         "features_extractor_class": CustomCNN,
-        "features_extractor_kwargs": {"features_dim": 256},  # Change feature dimensions if needed
+        "features_extractor_kwargs": {"features_dim": 32},  # Change feature dimensions if needed
+        "net_arch": dict(pi=[32], vf=[16])
     }
     # env = CarRLEnvironment(car_service)  # Adjust frame_stack_num based on how many frames to stack
-    rl_model = PPO.load(r".\PPO_best_model.zip")
+    rl_model = PPO.load(r".\result2\model.zip", env=env, policy_kwargs=policy_kwargs)
 
     # Start the car service with the RL process
     car_service.start_with_RLProcess(RL_Process)

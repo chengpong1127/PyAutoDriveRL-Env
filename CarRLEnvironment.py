@@ -25,11 +25,12 @@ class CarRLEnvironment(gym.Env):
 
         self.car_service = car_service
         self.car_service.start_with_nothing()
-        self.image_size = (120, 60)
+        self.image_size = (64, 64)
 
         # Observation space includes stacked frames and steering/speed information.
         self.observation_space = spaces.Dict({
             "image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0], 3), dtype=np.uint8),
+            "gray_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
             "line_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
             "depth_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
             "road_segmentation_image": spaces.Box(low=0, high=255, shape=(self.image_size[1], self.image_size[0]), dtype=np.uint8),
@@ -52,6 +53,7 @@ class CarRLEnvironment(gym.Env):
             "obstacle_car": spaces.MultiBinary(1),
             "steering_angle_queue": spaces.Box(low=-1.0, high=1.0, shape=(5,), dtype=np.float32),
             "throttle_queue": spaces.Box(low=-1.0, high=1.0, shape=(5,), dtype=np.float32),
+            "direction": spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32),
         })
 
         # Action space: steering angle (-1 to 1) and throttle (0 to 1)
@@ -68,6 +70,7 @@ class CarRLEnvironment(gym.Env):
         self.image_queue = deque(maxlen=3)
         self.steering_angle_queue = deque(maxlen=5)
         self.throttle_queue = deque(maxlen=5)
+        self.direction_queue = deque(maxlen=6)
         self.__check_done_use_last_timestamp = 0
         self.__check_done_use_progress = 0
         
@@ -105,6 +108,7 @@ class CarRLEnvironment(gym.Env):
         self.image_queue.clear()
         self.steering_angle_queue.clear()
         self.throttle_queue.clear()
+        self.direction_queue.clear()
         self.__check_done_use_last_timestamp = car_data.timestamp
         self.__check_done_use_progress = 0
         
@@ -142,6 +146,7 @@ class CarRLEnvironment(gym.Env):
         self.throttle_queue.append(throttle)
 
         self.current_observation = self.car_data_to_observation(car_data)
+        self.direction_queue.append(self.current_observation['direction'][0])
 
         reward = self._compute_reward(car_data)
         self.done = self._check_done(car_data)
@@ -159,6 +164,7 @@ class CarRLEnvironment(gym.Env):
         os.system('cls' if os.name == 'nt' else 'clear')
         print(car_data)
         print(f"FPS: {fps: 05.1f} -> Unity World FPS: {unity_fps: 05.1f}, Reward: {reward: 05.2f}")
+        print(f"direction: {self.current_observation['direction']}")
     
 
     def _compute_reward(self, car_data: CarData):
@@ -171,7 +177,20 @@ class CarRLEnvironment(gym.Env):
         Returns:
             reward (float): The calculated reward based on progress and track position.
         """
-        reward = (self.progress_queue[-1] - self.progress_queue[0]) * 1000 + car_data.velocity_z * 0.005
+        reward = (self.progress_queue[-1] - self.progress_queue[0]) * 1000 + car_data.velocity_z * 0.05
+        if car_data.velocity_z < 0:
+            reward -= 0.1
+            
+        if self.current_observation['direction'][0] == 0:
+            reward += 0.1
+            
+        if self.direction_queue.count(1.0) > 5 or self.direction_queue.count(-1.0) > 5:
+            reward -= 0.05
+        
+        if self.current_observation['direction'][0] == -1 and car_data.steering_angle < 0:
+            reward += 0.1
+        if self.current_observation['direction'][0] == 1 and car_data.steering_angle > 0:
+            reward += 0.1
         # if len(self.steering_angle_queue) > 1:
         #     reward -= (self.steering_angle_queue[-1] - self.steering_angle_queue[-2]) ** 2
         reward += self.current_observation['road_segmentation_image'].mean() / 256.0 * 0.1
@@ -261,15 +280,8 @@ class CarRLEnvironment(gym.Env):
         segmentation_result = self.segmentation_model(Image.fromarray(car_data.image))
         road_segmentation = [np.array(result['mask']) for result in segmentation_result if result['label'] in ['road', 'earth', 'building']]
         
-        # debug: save segmentation result
-        original_image = Image.fromarray(car_data.image)
-        # add segmentation result to the image
-        for result in segmentation_result:
-            mask = np.array(result['mask'])
-            mask = np.stack([mask, mask, mask], axis=-1)
-            original_image = Image.blend(original_image, Image.fromarray(mask), alpha=0.5)
-            
-        original_image.save("segmentation_result.jpg")
+        gray_image = cv2.cvtColor(car_data.image, cv2.COLOR_RGB2GRAY)
+        gray_image = cv2.GaussianBlur(gray_image, (5, 5), 0)
         
         if len(road_segmentation) > 0:
             # or all the road labels
@@ -280,7 +292,7 @@ class CarRLEnvironment(gym.Env):
         lane_detection_result = lane_detection(car_data.image)
         
         def resize(image):
-            image = image[240: 360, :]
+            image = image[180: 360, :]
             return cv2.resize(image, self.image_size, interpolation=cv2.INTER_LINEAR)
         
         progress_diff = self.progress_queue[-1] - self.progress_queue[0] if len(self.progress_queue) > 1 else 0.0
@@ -294,6 +306,7 @@ class CarRLEnvironment(gym.Env):
 
         observation = {
             "image": resize(car_data.image),
+            "gray_image": resize(gray_image),
             "line_image": resize(lane_detection_result["line_image"]),
             "depth_image": resize(depth_image),
             "optical_flow": resize(self.get_optical_flow()),
@@ -318,12 +331,25 @@ class CarRLEnvironment(gym.Env):
             "throttle_queue": np.array(throttle_queue, dtype=np.float32),
         }
         
-        cv2.imwrite("images/initial_image.jpg", car_data.image)
-        cv2.imwrite("images/image.jpg", observation["image"])
-        cv2.imwrite("images/line_image.jpg", observation["line_image"])
-        cv2.imwrite("images/optical_flow_x.jpg", observation["optical_flow"][:, :, 0])
-        cv2.imwrite("images/optical_flow_y.jpg", observation["optical_flow"][:, :, 1])
-        cv2.imwrite("images/road_segmentation_image.jpg", observation["road_segmentation_image"])
+        # check road_segmentation_image 255 count, if left > right, direction = -1, else 1
+        left = observation["road_segmentation_image"][:, :30].sum()
+        right = observation["road_segmentation_image"][:, -30:].sum()
+        if left > right:
+            observation["direction"] = np.array([-1.0], dtype=np.float32)
+        elif right > left:
+            observation["direction"] = np.array([1.0], dtype=np.float32)
+        else:
+            observation["direction"] = np.array([0.0], dtype=np.float32)
+        
+        
+        # cv2.imwrite("images/initial_image.jpg", car_data.image)
+        # cv2.imwrite("images/image.jpg", observation["image"])
+        # cv2.imwrite("images/gray_image.jpg", observation["gray_image"])
+        # cv2.imwrite("images/line_image.jpg", observation["line_image"])
+        # cv2.imwrite("images/depth_image.jpg", observation["depth_image"])
+        # cv2.imwrite("images/optical_flow_x.jpg", observation["optical_flow"][:, :, 0])
+        # cv2.imwrite("images/optical_flow_y.jpg", observation["optical_flow"][:, :, 1])
+        # cv2.imwrite("images/road_segmentation_image.jpg", observation["road_segmentation_image"])
         
         
         

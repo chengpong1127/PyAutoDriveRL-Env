@@ -37,9 +37,12 @@ class CustomCNN(BaseFeaturesExtractor):
         image_size = observation_space['image'].shape[1:]
         feature_dim = 32
         #self.image_encoder = ImageEncoderSWIN(feature_dim)
-        self.hybrid_encoder = ImageEncoder((2, *image_size), feature_dim)
+        self.hybrid_encoder = ImageEncoder((3, *image_size), feature_dim)
+        with th.no_grad():
+            hybrid_feature_dim = self.hybrid_encoder(th.zeros(1, 3, *image_size)).shape[1]
         self.mlp = nn.Sequential(
-            nn.Linear(feature_dim * 1 + 4, features_dim),  # Add steering and speed (2,)
+            nn.Linear(hybrid_feature_dim + 6, features_dim),  # Add steering and speed (2,)
+            nn.ReLU(),
         )
 
     def forward(self, observations):
@@ -52,24 +55,20 @@ class CustomCNN(BaseFeaturesExtractor):
         Returns:
             Tensor: A tensor representing extracted features from image and steering/speed.
         """
-        cat_features = ['steering_angle', 'throttle', 'speed']
-        
-        #image = observations['image']
+        cat_features = ['steering_angle', 'direction', 'speed', 'progress_diff', 'throttle']
+    
+        gray_image = observations['gray_image'].unsqueeze(1)
         line_image = observations['line_image'].unsqueeze(1)
         depth_image = observations['depth_image'].unsqueeze(1)
-        optical_flow = observations['optical_flow'].permute(0, 3, 1, 2)
-        road_segmentation = observations['road_segmentation_image'].unsqueeze(1)
         
         
-        hybrid_image = th.cat([line_image, road_segmentation], dim=1)
+        hybrid_image = th.cat([gray_image, line_image, depth_image], dim=1)
         hybrid_feature = self.hybrid_encoder(hybrid_image)
-        #image_feature = self.image_encoder(image)
         additional_input = th.cat([observations[cat_feature] for cat_feature in cat_features], dim=1)
         additional_input = th.cat([additional_input, observations['obstacle_car'].to(th.float32)], dim=1)
 
         total_features = th.cat(
             [hybrid_feature] + 
-            #[image_feature] +
             [additional_input], 
         dim=1)
         
@@ -95,14 +94,14 @@ if __name__ == '__main__':
     # Define policy arguments with the custom CNN feature extractor
     policy_kwargs = {
         "features_extractor_class": CustomCNN,
-        "features_extractor_kwargs": {"features_dim": 64},  # Change feature dimensions if needed
-        "optimizer_kwargs": {"weight_decay": 0.0001},
+        "features_extractor_kwargs": {"features_dim": 32},  # Change feature dimensions if needed
+        "net_arch": dict(pi=[32], vf=[16])
     }
 
     # Choose between SAC or PPO model (PPO used here for example)
     #model = SAC("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, buffer_size=10000, batch_size=256, tensorboard_log="run/")
     model = PPO("MultiInputPolicy", env, policy_kwargs=policy_kwargs, verbose=1, n_steps=256, batch_size=128, n_epochs=10, learning_rate=0.0003, tensorboard_log="run/")
-    model_path = "result/model.zip"
+    model_path = "result2/model.zip"
     if os.path.exists(model_path):
         print("loading model...")
         model.load(model_path)
@@ -127,7 +126,7 @@ if __name__ == '__main__':
         """
 
         # Train the model for a specified number of timesteps
-        model.learn(total_timesteps=total_timesteps, reset_num_timesteps=False, callback=WandbCallback(model_save_path = 'result/', model_save_freq = save_interval))
+        model.learn(total_timesteps=total_timesteps, reset_num_timesteps=False, callback=WandbCallback(model_save_path = 'result2/', model_save_freq = save_interval))
 
         # Save the latest model after each training step
         print(f"Saving latest model: {latest_model_path}")

@@ -18,22 +18,17 @@ class ImageEncoder(nn.Module):
     def __init__(self, input_dim, output_dim, pool_type="avg"):
         super(ImageEncoder, self).__init__()
         self.main = nn.Sequential(
-            ConvBlock(input_dim[0], 32, kernel_size=9, stride=2, padding=0, pool_type=pool_type),
-            ConvBlock(32, 64, kernel_size=5, stride=2, padding=0, pool_type=pool_type),
+            ConvBlock(input_dim[0], 16, kernel_size=9, stride=2, padding=0, pool_type=pool_type),
+            ConvBlock(16, 32, kernel_size=5, stride=2, padding=0, pool_type=pool_type),
+            ConvBlock(32, 32, kernel_size=3, stride=2, padding=0, pool_type=pool_type),
             nn.Flatten(),
         )
-        with torch.no_grad():
-            flatten_size = self.main(torch.zeros(1, *input_dim)).shape[1]
-        self.linear = nn.Linear(flatten_size, output_dim)
-        
-        self.gaussian_blur = T.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 2.0))
-        self.noise_level = 0.05 
+        # with torch.no_grad():
+        #     flatten_size = self.main(torch.zeros(1, *input_dim)).shape[1]
+        # self.linear = nn.Linear(flatten_size, output_dim)
     
     def forward(self, x):
-        #x += torch.randn_like(x) * self.noise_level
-        x = self.gaussian_blur(x)
-        x = self.main(x)
-        return self.linear(x)
+        return self.main(x)
     
 class ImageEncoderSWIN(nn.Module):
     def __init__(self, output_dim):
